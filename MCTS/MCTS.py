@@ -8,8 +8,5 @@ class MCTS:
     def rollout(self):
         pass
     
-    def rollback(self):
-        pass
-    
     def backpropagate(self):
         pass
