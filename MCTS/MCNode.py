@@ -75,7 +75,7 @@ class MCNode():
     
     # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
-        return self.visit_counts[action] / self.sum_evaluation
+        return self.sum_evaluation / self.visit_counts[action]
     
     
     # Backpropagate the value up through the tree.
@@ -89,7 +89,7 @@ class MCNode():
             self.visit_counts[self.action_taken] = 0
         self.visit_counts[self.action_taken] += 1
         
-        if self.parent == None:
+        if self.parent is None:
             return
         
         self.parent.backpropagate(value * discount_factor, discount_factor)

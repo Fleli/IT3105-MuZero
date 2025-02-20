@@ -16,7 +16,7 @@ class MCTS():
     _verbose = True
     
     
-    game: AbstractGame                      # Actual, concrete game model (TODO: Rename class to 'GameInterface' or similar)
+    game: AbstractGame                      # Actual, concrete game model (NOTE: Rename class to 'Game' since it's concrete)
     
     dynamics_network: NeuralNetwork         # (Abstract state k, Action k) -> (Abstract state k+1, Reward k)
     prediction_network: NeuralNetwork       # (Abstract state k) -> (Value k)
@@ -101,7 +101,7 @@ class MCTS():
         
         policy = self._default_policy if use_default_policy else self._tree_policy
         
-        action_space = self.game.action_space()  # Currently returns None. TODO: PULL CHANGES FROM MAIN, RESOLVE BEFORE PUSH.
+        action_space = self.game.action_space()
         best_next = None
         best_evaluation = 0.0  # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
         
