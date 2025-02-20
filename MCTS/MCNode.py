@@ -64,7 +64,9 @@ class MCNode():
         return self.visit_counts[action] / self.sum_evaluation
     
     
-    def backpropagate(self, value: float):
+    # Backpropagate the value up through the tree.
+    # Discount by multiplying by the discount factor (e.g. 0.95) at each step.
+    def backpropagate(self, value: float, discount_factor: float):
         
         self.sum_evaluation += value
         self.visits_to_self += 1
@@ -78,7 +80,7 @@ class MCNode():
             return
         
         # bør denne discountes?
-        self.parent.backpropagate(value)
+        self.parent.backpropagate(value * discount_factor, discount_factor)
     
     
         

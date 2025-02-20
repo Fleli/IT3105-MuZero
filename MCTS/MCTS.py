@@ -19,6 +19,7 @@ class MCTS():
     
     
     def __init__(self, game: AbstractGame, dynamics: NeuralNetwork, prediction: NeuralNetwork, representation: NeuralNetwork):
+        self.game = game
         self.dynamics_network = dynamics
         self.prediction_network = prediction
         self.representation_network = representation
@@ -48,7 +49,7 @@ class MCTS():
             
             current_node.expand()
             child = current_node.uniform_get_random_child()
-            terminal_value = self._rollout(child, explored, self._rollout_depth)
+            self._rollout(child, explored, self._rollout_depth)
         
         # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
@@ -57,7 +58,7 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         return root.biased_get_random_action()
     
-    def _rollout( self, leaf: MCNode, explored: list[MCNode], rollout_depth: int ) -> float:
+    def _rollout( self, leaf: MCNode, explored: list[MCNode], rollout_depth: int ):
         
         node = leaf
         
@@ -67,9 +68,9 @@ class MCTS():
             node = self._default_policy(node)
             explored.append(node)
         
-        
-        
-        return 0
+        evaluation = self.prediction_network.predict(node.state)
+        discount_factor = 1     # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
+        node.backpropagate(evaluation, discount_factor)
     
     
     def _tree_policy(self, node: MCNode) -> MCNode:
@@ -91,7 +92,8 @@ class MCTS():
         for action in action_space:
             
             # TODO: Verify that this is correct use of the networks
-            next_state = self.dynamics_network.predict(node.state)
+            dynamics_input = [action] + node.state  # One proposition for the input format. Standardize with rest of system.
+            next_state = self.dynamics_network.predict(dynamics_input)
             evaluation = self.prediction_network.predict(next_state)
             
             if evaluation > best_evaluation:
