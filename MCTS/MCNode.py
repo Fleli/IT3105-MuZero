@@ -72,14 +72,12 @@ class MCNode():
         self.visits_to_self += 1
         
         if self.visit_counts[self.action_taken] is None:
-            print("is none")
             self.visit_counts[self.action_taken] = 0
         self.visit_counts[self.action_taken] += 1
         
         if self.parent == None:
             return
         
-        # bør denne discountes?
         self.parent.backpropagate(value * discount_factor, discount_factor)
     
     
