@@ -7,6 +7,6 @@ class NeuralNetwork:
     def BPTT(self):
         pass
     
-    def predict(self):
-        pass
+    def predict(self, input: list[float]) -> list[float]:
+        return []  # TODO: Implement computation.
     
