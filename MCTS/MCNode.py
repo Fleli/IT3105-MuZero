@@ -1,11 +1,12 @@
 
-from AbstractState import *
+from MCTS.MCTSTypes import *
 
-import random
+import jax.numpy as jnp
+
 import math
+from random import choice as uniform_choice, choices as weighted_choice
 
 type MCNode = MCNode
-type Action = int
 
 class MCNode():
     
@@ -13,7 +14,7 @@ class MCNode():
     _c = 1
     
     state: AbstractState
-    children: list[MCNode] = []
+    children: dict[Action, MCNode] = {}
     
     parent: MCNode
     action_taken: Action
@@ -32,10 +33,22 @@ class MCNode():
         pass
     
     
-    # Randomly choose a child and return it
-    def get_random_child(self) -> MCNode:
-        # Also set 'action_taken'
-        return random.choice(self.children)
+    # Randomly choose a child and return it. Uniform distribution.
+    # Save the action for later. It's used during backpropagation.
+    def uniform_get_random_child(self) -> MCNode:
+        self.action_taken = uniform_choice(self.children.keys())
+        child = self.children[self.action_taken]
+        return child
+    
+    
+    # Randomly select a child and return it.
+    # Probabilities are proportional to the child's visit
+    # count, so more explored children are favored. Hence,
+    # is suitable to select actual action after MCTS.
+    def biased_get_random_action(self) -> Action:
+        actions = list(self.children.keys())  # TODO: This is probably quite slow. Find better way to accomplish the same thing.
+        weights = [ self.children[action].visits_to_self for action in actions ]
+        return weighted_choice(actions, weights=weights)
     
     
     def is_leaf_node(self) -> bool:
@@ -52,11 +65,21 @@ class MCNode():
     
     
     def backpropagate(self, value: float):
+        
         self.sum_evaluation += value
         self.visits_to_self += 1
+        
+        if self.visit_counts[self.action_taken] is None:
+            print("is none")
+            self.visit_counts[self.action_taken] = 0
+        self.visit_counts[self.action_taken] += 1
         
         if self.parent == None:
             return
         
+        # bør denne discountes?
         self.parent.backpropagate(value)
+    
+    
+        
     

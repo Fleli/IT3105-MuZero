@@ -3,8 +3,6 @@ from NeuralNetwork.NeuralNetwork import *
 
 from MCNode import *
 
-type ConcreteGameState = list[float]
-
 class MCTS():
     
     
@@ -18,7 +16,7 @@ class MCTS():
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
-    def search( self, N_rollouts: int, concrete_game_states: list[ConcreteGameState] ):
+    def search( self, N_rollouts: int, concrete_game_states: list[ConcreteGameState] ) -> Action:
         
         abstract_state: AbstractState = self.representation_network.predict(concrete_game_states)
         
@@ -34,11 +32,20 @@ class MCTS():
                 explored.append(current_node)
             
             current_node.expand()
-            child = current_node.get_random_child()
+            child = current_node.uniform_get_random_child()
             terminal_value = self._rollout(child, explored)       # Legg til variabel lengde på rollout?
-            
         
-        return None  # TODO: Return 
+        
+        
+        # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
+        # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
+        # mot denne siden.
+        
+        
+        
+        
+        # Get random child, probability weighted to favor those branches that are explored the most.
+        return root.biased_get_random_action()
     
     
     def _tree_policy(self, node: MCNode) -> MCNode:

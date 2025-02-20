@@ -1,2 +1,0 @@
-
-type AbstractState = list[float]
