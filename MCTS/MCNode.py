@@ -35,7 +35,7 @@ class MCNode():
         
         assert len(self.children) == 0, 'Unexpectedly regenerated children of node.'
         
-        action_space = game.legal_actions()
+        action_space = game.action_space()
         
         for action in action_space:
             network_input = dynamics_network_input(self.state, action)
@@ -93,7 +93,3 @@ class MCNode():
             return
         
         self.parent.backpropagate(value * discount_factor, discount_factor)
-    
-    
-        
-    

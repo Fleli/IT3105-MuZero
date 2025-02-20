@@ -80,13 +80,11 @@ class MCTS():
     
     
     # Run tree policy on (node, action) pair.
-    # NOTE: Node must be expanded before running default policy, as it assumes its children exist.
     def _tree_policy(self, node: MCNode, action: Action) -> tuple[float, MCNode]:
         return node.Q(action) + node.u(action), node.children[action]
     
     
     # Run default policy (dynamics + prediction network) on (node, action) pair.
-    # NOTE: Node must be expanded before running default policy, as it assumes its children exist.
     def _default_policy(self, node: MCNode, action: Action) -> tuple[float, MCNode]:
         
         # TODO: Verify that this is correct use of the networks
@@ -97,11 +95,13 @@ class MCTS():
         return evaluation, next_state
     
     
+    # Run either the tree or default policy from a node to select one of its children.
+    # Specify whether to use default or tree policy.
     def _policy(self, node: MCNode, use_default_policy: bool) -> MCNode:
         
         policy = self._default_policy if use_default_policy else self._tree_policy
         
-        action_space = self.game.legal_actions()  # Currently returns None. TODO: PULL CHANGES FROM MAIN, RESOLVE BEFORE PUSH.
+        action_space = self.game.action_space()  # Currently returns None. TODO: PULL CHANGES FROM MAIN, RESOLVE BEFORE PUSH.
         best_next = None
         best_evaluation = 0.0  # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
         
@@ -112,8 +112,6 @@ class MCTS():
                 best_evaluation = evaluation
         
         return best_next
-    
-        
     
     
     def log(self, content: str):
