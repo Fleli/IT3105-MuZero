@@ -1,6 +1,7 @@
 
-from NeuralNetwork.NeuralNetwork import *
 from Game.Game import *
+from Conventions import *
+from NeuralNetwork.NeuralNetwork import *
 
 from MCNode import *
 
@@ -38,7 +39,7 @@ class MCTS():
         
         abstract_state: AbstractState = self.representation_network.predict(concrete_game_states)
         
-        root = MCNode(abstract_state)
+        root = MCNode(abstract_state, None)
         
         for simulation in range(N_rollouts):
             
@@ -87,10 +88,12 @@ class MCTS():
     # Run default policy (dynamics + prediction network) on (node, action) pair.
     # NOTE: Node must be expanded before running default policy, as it assumes its children exist.
     def _default_policy(self, node: MCNode, action: Action) -> tuple[float, MCNode]:
+        
         # TODO: Verify that this is correct use of the networks
-        dynamics_input = [action] + node.state  # One proposition for the input format. Standardize with rest of system.
+        dynamics_input = dynamics_network_input(node.state, action)
         next_state = self.dynamics_network.predict(dynamics_input)
         evaluation = self.prediction_network.predict(next_state)
+        
         return evaluation, next_state
     
     

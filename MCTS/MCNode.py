@@ -1,7 +1,8 @@
 
+from Game.Game import *
+from Conventions import *
 from MCTS.MCTSTypes import *
-
-import jax.numpy as jnp
+from NeuralNetwork.NeuralNetwork import *
 
 import math
 from random import choice as uniform_choice, choices as weighted_choice
@@ -24,13 +25,23 @@ class MCNode():
     sum_evaluation: float = 0
     
     
-    def __init__(self, state: AbstractState):
+    def __init__(self, state: AbstractState, parent: MCNode):
         self.state = state
+        self.parent = parent
     
     
-    # TODO: Generate the children of this node.
-    def expand(self):
-        pass
+    # Generate the children of this node.
+    def expand(self, game: AbstractGame, dynamics_network: NeuralNetwork):
+        
+        assert len(self.children) == 0, 'Unexpectedly regenerated children of node.'
+        
+        action_space = game.legal_actions()
+        
+        for action in action_space:
+            network_input = dynamics_network_input(self.state, action)
+            next_abstract_state = dynamics_network(network_input)
+            child = MCNode(next_abstract_state, self)
+            self.children[action] = child
     
     
     # Randomly choose a child and return it. Uniform distribution.
@@ -51,15 +62,18 @@ class MCNode():
         return weighted_choice(actions, weights=weights)
     
     
+    # A node is considered a leaf if it has no children.
     def is_leaf_node(self) -> bool:
         return len(self.children) == 0
     
     
+    # u(a) is the exploration bonus of action a
     def u(self, action: Action) -> float:
         N_sa = self.visit_counts[action]
         return self._c * math.sqrt( math.log2(self.visits_to_self) / (1 + N_sa) )
     
     
+    # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
         return self.visit_counts[action] / self.sum_evaluation
     
