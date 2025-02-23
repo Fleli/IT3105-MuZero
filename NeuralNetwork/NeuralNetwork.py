@@ -22,10 +22,6 @@ class NeuralNetwork:
     def loss_function(self, activation, targets):
         return 0.5 * jnp.sum((activation - targets) ** 2)
 
-    def derivative_loss(self, activation, targets):
-        return activation - targets
-
-
     def forward(self, input, state):
         new_hidden_state = self.final_hidden_layer.compute_output(jnp.concatenate([input, state], axis=0))
         output = self.output_layer.compute_output(new_hidden_state)
@@ -53,6 +49,8 @@ class NeuralNetwork:
         stored_states = [state]
         stored_activations = []
         stored_losses = []
+
+        grad_loss_fn = jax.grad(self.loss_function, argnums=0)
         for t in range(0, T-1):
             output, state = model.forward(inputs[t], state)
             activation = output
@@ -68,8 +66,7 @@ class NeuralNetwork:
                     jnp.zeros_like, self.parameters)
 
                 for j in range(t, max(0, t - k + 1), -1):
-                    grad_output = self.derivative_loss(
-                        stored_losses[j], stored_activations[j])
+                    grad_output = grad_loss_fn(stored_activations[j], targets[j])
                     grad_param_j, grad_state = self.backward(
                         grad_output, grad_state, stored_states[j], inputs[j])  # Computes gradient at the specified timestep
                     grad_parameters = grad_parameters + grad_param_j
