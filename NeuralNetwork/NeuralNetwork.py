@@ -7,28 +7,30 @@ class NeuralNetwork:
     include_bias: bool
     output_layer: NeuralNetworkLayer
 
-    def __init__(self, layers: list[int], output_layer: int, activation_function, include_bias: bool, max_output: float):
+    def __init__(self, input_dim: int, layers: list[int], output_layer: int, activation_function, include_bias: bool, max_output: float):
+        layer_input_dims = [input_dim] + layers[:-1]
         self.hidden_layers = [
             NeuralNetworkLayer(
                 n_neurons=n,
                 activation_function=activation_function,
                 params={ 
-                    "weights": jnp.zeros((n,)),   
-                    "hidden_weights": jnp.zeros((n,)),   
+                    "weights": jnp.zeros((n, in_dim)),         
+                    "hidden_weights": jnp.zeros((n, n)),          
                     "bias": jnp.zeros((n,)) if include_bias else None
                 },
                 include_bias=include_bias
             )
-            for n in layers
+            for n, in_dim in zip(layers, layer_input_dims)
         ]
         self.max_output = max_output
         self.include_bias = include_bias
+        
         self.output_layer = NeuralNetworkLayer(
             n_neurons=output_layer,
             activation_function=activation_function,
             params={
-                "weights": jnp.zeros((output_layer,)), 
-                "hidden_weights": jnp.zeros((output_layer,)),  
+                "weights": jnp.zeros((output_layer, layers[-1])),  
+                "hidden_weights": jnp.zeros((output_layer, output_layer)), 
                 "bias": jnp.zeros((output_layer,)) if include_bias else None
             },
             include_bias=include_bias
