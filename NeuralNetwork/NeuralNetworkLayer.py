@@ -26,10 +26,12 @@ class NeuralNetworkLayer:
         else:
             self.activation_function = activation_function
 
-    def compute_output(self, input: jnp.ndarray, hidden_state: jnp.ndarray = None) -> jnp.ndarray:
-        z = jnp.dot(self.parameters["weights"], input) 
-        if hidden_state is not None and self.parameters.get("hidden_weights", None) is not None:
-            z = z + jnp.dot(self.parameters["hidden_weights"], hidden_state)
-        if self.include_bias and self.parameters.get("bias", None) is not None:
-            z = z + self.parameters["bias"]
+    def compute_output(self, input: jnp.ndarray, hidden_state: jnp.ndarray = None, params = None) -> jnp.ndarray:
+        if params is None:
+            params = self.parameters
+        z = jnp.dot(params["weights"], input) 
+        if hidden_state is not None and params.get("hidden_weights", None) is not None:
+            z = z + jnp.dot(params["hidden_weights"], hidden_state)
+        if self.include_bias and params.get("bias", None) is not None:
+            z = z + params["bias"]
         return self.activation_function(z)

@@ -40,11 +40,13 @@ class NeuralNetwork:
     def loss_function(self, activation, targets):
         return 0.5 * jnp.sum((activation - targets) ** 2)
 
-    def forward(self, input, state_list):
+    def forward(self, input, state_list, params=None):
+        if params is None:
+            params = self.layer_parameters
         hidden_states = []
         current_input = input
-        for layer, state in zip(self.hidden_layers, state_list):
-            new_state = layer.compute_output(current_input, state)
+        for i, (layer, state) in enumerate(zip(self.hidden_layers, state_list)):
+            new_state = layer.compute_output(current_input, state, params[i])
             hidden_states.append(new_state)
             current_input = new_state
         output = self.output_layer.compute_output(current_input)
@@ -53,11 +55,7 @@ class NeuralNetwork:
 
     def backward(self, grad_output, grad_state_next, stored_state, input):
         def forward_fn(layer_params, state):
-            for i, layer in enumerate(self.hidden_layers):
-                layer.parameters = layer_params[i]
-            self.output_layer.parameters = layer_params[-1]
-            output, new_states = self.forward(input, state)
-            return output, new_states
+            return self.forward(input, state, layer_params)
 
         _, vjp_fn = jax.vjp(forward_fn, self.layer_parameters, stored_state)
         combined_grad = (grad_output, grad_state_next)
