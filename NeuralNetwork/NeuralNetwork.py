@@ -37,14 +37,17 @@ class NeuralNetwork:
     def loss_function(self, activation, targets):
         return 0.5 * jnp.sum((activation - targets) ** 2)
 
-    def forward(self, input, state):
+    def forward(self, input, state_list):
         hidden_states = []
-        current_input = jnp.concatenate([input, state], axis=0)
-        for layer in self.hidden_layers:
-            current_input = layer.compute_output(current_input)
-            hidden_states.append(current_input)
+        current_input = input
+        for layer, state in zip(self.hidden_layers, state_list):
+            combined_input = jnp.concatenate([current_input, state], axis=0)
+            new_state = layer.compute_output(combined_input)
+            hidden_states.append(new_state)
+            current_input = new_state
         output = self.output_layer.compute_output(current_input)
         return output, hidden_states
+
 
     def backward(self, grad_output, grad_state_next, stored_state, input):
         def forward_fn(layer_params, state):
@@ -61,7 +64,7 @@ class NeuralNetwork:
 
     def BPTT(self, inputs, targets, initial_state, model, learning_rate, k):
         T = len(inputs)  # Number of time steps in the series
-        
+
         state = initial_state
         stored_states = [state]
         stored_activations = []
