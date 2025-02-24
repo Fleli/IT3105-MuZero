@@ -24,6 +24,7 @@ class NeuralNetwork:
         ]
         self.max_output = max_output
         self.include_bias = include_bias
+        self.reset_hidden_state()
         
         self.output_layer = NeuralNetworkLayer(
             n_neurons=output_layer,
@@ -99,3 +100,11 @@ class NeuralNetwork:
                 stored_states = [state]
                 stored_activations = []
                 stored_losses = []
+    
+    def predict(self, input):
+        output, state = self.forward(input, self.hidden_states)
+        self.hidden_states = state
+        return output
+    
+    def reset_hidden_state(self):
+        self.hidden_states = [jnp.zeros((layer.n_neurons, )) for layer in self.hidden_layers]
