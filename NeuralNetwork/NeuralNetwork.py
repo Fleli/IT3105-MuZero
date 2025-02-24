@@ -31,6 +31,7 @@ class NeuralNetwork:
             activation_function=activation_function,
             params={
                 "weights": jnp.zeros((output_layer, layers[-1])),  
+                "hidden_weights": jnp.zeros((output_layer,)),
                 "bias": jnp.zeros((output_layer,)) if include_bias else None
             },
             include_bias=include_bias
