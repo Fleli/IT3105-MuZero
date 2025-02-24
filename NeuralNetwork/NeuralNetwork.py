@@ -30,7 +30,6 @@ class NeuralNetwork:
             activation_function=activation_function,
             params={
                 "weights": jnp.zeros((output_layer, layers[-1])),  
-                "hidden_weights": jnp.zeros((output_layer, output_layer)), 
                 "bias": jnp.zeros((output_layer,)) if include_bias else None
             },
             include_bias=include_bias
@@ -60,7 +59,7 @@ class NeuralNetwork:
             output, new_states = self.forward(input, state)
             return output, new_states
 
-        (output, new_states), vjp_fn = jax.vjp(forward_fn, self.layer_parameters, stored_state)
+        _, vjp_fn = jax.vjp(forward_fn, self.layer_parameters, stored_state)
         combined_grad = (grad_output, grad_state_next)
         grad_layer_parameters, grad_state = vjp_fn(combined_grad)
         return grad_layer_parameters, grad_state
