@@ -1,9 +1,9 @@
 
 from Game.Game import *
-from Conventions import *
+from MCTS.Conventions import *
 from NeuralNetwork.NeuralNetwork import *
 
-from MCNode import *
+from MCTS.MCNode import *
 
 class MCTS():
     
@@ -13,7 +13,7 @@ class MCTS():
     
     
     _rollout_depth = 1
-    _verbose = True
+    _verbose = False
     
     
     game: AbstractGame                      # Actual, concrete game model (NOTE: Rename class to 'Game' since it's concrete)
@@ -33,11 +33,10 @@ class MCTS():
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
-    def search( self, N_rollouts: int, concrete_game_states: list[ConcreteGameState] ) -> Action:
-        
+    def search(self, N_rollouts: int, concrete_game_states: list[ConcreteGameState]) -> Action:
         self.log("Search for next actual move")
         
-        abstract_state: AbstractState = self.representation_network.predict(concrete_game_states)
+        abstract_state: AbstractState = self.representation_network.predict(concrete_game_states[-1])
         
         root = MCNode(abstract_state, None)
         
@@ -52,7 +51,8 @@ class MCTS():
                 current_node = self._policy(current_node, self._TREE_POLICY)
                 explored.append(current_node)
             
-            current_node.expand()
+            current_node.expand(self.game, self.dynamics_network)
+
             child = current_node.uniform_get_random_child()
             self._rollout(child, explored, self._rollout_depth)
         
@@ -70,7 +70,8 @@ class MCTS():
         
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
-            node.expand()
+            node.expand(self.game, self.dynamics_network)
+
             node = self._policy(node, self._DEFAULT_POLICY)
             explored.append(node)
         
@@ -86,32 +87,31 @@ class MCTS():
     
     # Run default policy (dynamics + prediction network) on (node, action) pair.
     def _default_policy(self, node: MCNode, action: Action) -> tuple[float, MCNode]:
-        
-        # TODO: Verify that this is correct use of the networks
         dynamics_input = dynamics_network_input(node.state, action)
         next_state = self.dynamics_network.predict(dynamics_input)
         evaluation = self.prediction_network.predict(next_state)
-        
-        return evaluation, next_state
+        new_node = MCNode(next_state, parent=node, action=action)
+
+        return evaluation, new_node
+
     
     
     # Run either the tree or default policy from a node to select one of its children.
     # Specify whether to use default or tree policy.
     def _policy(self, node: MCNode, use_default_policy: bool) -> MCNode:
-        
         policy = self._default_policy if use_default_policy else self._tree_policy
-        
         action_space = self.game.action_space()
         best_next = None
-        best_evaluation = 0.0  # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
+        best_evaluation = -float("inf")
         
         for action in action_space:
-            evaluation, next = policy(node, action)
-            if evaluation > best_evaluation:
-                best_next = next
-                best_evaluation = evaluation
-        
-        return best_next
+            if action in node.children:
+                evaluation, next_node = policy(node, action)
+                if evaluation > best_evaluation:
+                    best_next = next_node
+                    best_evaluation = evaluation
+        return best_next if best_next is not None else node
+
     
     
     def log(self, content: str):
