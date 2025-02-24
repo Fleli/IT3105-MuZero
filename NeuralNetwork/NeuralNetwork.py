@@ -58,7 +58,6 @@ class NeuralNetwork:
     def backward(self, grad_output, grad_state_next, stored_state, input):
         def forward_fn(layer_params, state):
             return self.forward(input, state, layer_params)
-
         _, vjp_fn = jax.vjp(forward_fn, self.layer_parameters, stored_state)
         combined_grad = (grad_output, grad_state_next)
         grad_layer_parameters, grad_state = vjp_fn(combined_grad)
@@ -83,7 +82,8 @@ class NeuralNetwork:
             stored_states.append(state)
 
             if ((t + 1) % k == 0) or (t == T - 1):
-                grad_state = 0
+                grad_state = jax.tree_map(jnp.zeros_like, initial_state)
+
                 grad_layer_parameters = jax.tree_map(jnp.zeros_like, self.layer_parameters)
 
                 for j in range(t, max(0, t - k + 1), -1):
