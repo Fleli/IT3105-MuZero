@@ -28,8 +28,8 @@ class NeuralNetworkLayer:
 
     def compute_output(self, input: jnp.ndarray, hidden_state: jnp.ndarray = None) -> jnp.ndarray:
         z = jnp.dot(self.parameters["weights"], input) 
-        if hidden_state is not None:
+        if hidden_state is not None and self.parameters.get("hidden_weights", None) is not None:
             z = z + jnp.dot(self.parameters["hidden_weights"], hidden_state)
-        if self.include_bias:
+        if self.include_bias and self.parameters.get("bias", None) is not None:
             z = z + self.parameters["bias"]
         return self.activation_function(z)
