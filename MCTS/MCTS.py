@@ -45,7 +45,8 @@ class MCTS():
             explored = [root]
             
             while not current_node.is_leaf_node(): 
-                current_node = self._tree_policy(current_node)
+                action = self._tree_policy(current_node)
+                current_node = current_node.children[action]
                 explored.append(current_node)
             
             current_node.expand()
@@ -68,7 +69,8 @@ class MCTS():
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
             node.expand()
-            node = self._default_policy(node)
+            action = self._default_policy(node)
+            node = node.children[action]
             explored.append(node)
         
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
@@ -78,23 +80,23 @@ class MCTS():
     
     
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)
-    def _tree_policy(self, node: MCNode) -> MCNode:
+    def _tree_policy(self, node: MCNode) -> Action:
         action_space = self.game.action_space()
-        best_next = None
+        best_action = None
         best_evaluation = 0.0  # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
         for action in action_space:
-            evaluation, next = node.Q(action) + node.u(action), node.children[action]
+            evaluation = node.Q(action) + node.u(action)
             if evaluation > best_evaluation:
-                best_next = next
+                best_action = action
                 best_evaluation = evaluation
-        return best_next
+        return best_action
     
     
     # Choose a random move with weighted probabilities using the prediction network.
-    def _default_policy(self, node: MCNode) -> MCNode:
+    def _default_policy(self, node: MCNode) -> Action:
         action_space: list[Action] = self.game.action_space()    # List of actions? Need to agree on interface here.
         probabilities = prediction_network_output(self.prediction_network.predict(node.state))
-        return weighted_choice(action_space, probabilities)
+        return weighted_choice(action_space, probabilities)[0]
     
     
     # Print a string if the verbose setting is True.
