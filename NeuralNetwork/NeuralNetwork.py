@@ -14,6 +14,7 @@ class NeuralNetwork:
                 activation_function=activation_function,
                 params={ 
                     "weights": jnp.zeros((n,)),   
+                    "hidden_weights": jnp.zeros((n,)),   
                     "bias": jnp.zeros((n,)) if include_bias else None
                 },
                 include_bias=include_bias
@@ -27,6 +28,7 @@ class NeuralNetwork:
             activation_function=activation_function,
             params={
                 "weights": jnp.zeros((output_layer,)), 
+                "hidden_weights": jnp.zeros((output_layer,)),  
                 "bias": jnp.zeros((output_layer,)) if include_bias else None
             },
             include_bias=include_bias
@@ -41,8 +43,7 @@ class NeuralNetwork:
         hidden_states = []
         current_input = input
         for layer, state in zip(self.hidden_layers, state_list):
-            combined_input = jnp.concatenate([current_input, state], axis=0)
-            new_state = layer.compute_output(combined_input)
+            new_state = layer.compute_output(current_input, state)
             hidden_states.append(new_state)
             current_input = new_state
         output = self.output_layer.compute_output(current_input)
@@ -62,7 +63,7 @@ class NeuralNetwork:
         grad_layer_parameters, grad_state = vjp_fn(combined_grad)
         return grad_layer_parameters, grad_state
 
-    def BPTT(self, inputs, targets, initial_state, model, learning_rate, k):
+    def BPTT(self, inputs, targets, initial_state, learning_rate, k):
         T = len(inputs)  # Number of time steps in the series
 
         state = initial_state
@@ -73,7 +74,7 @@ class NeuralNetwork:
         grad_loss_fn = jax.grad(self.loss_function, argnums=0)
 
         for t in range(0, T - 1):
-            output, state = model.forward(inputs[t], state)
+            output, state = self.forward(inputs[t], state)
             activation = output
             loss = self.loss_function(activation, targets[t])
             stored_activations.append(activation)
