@@ -1,6 +1,7 @@
 import random
 from Config import CONFIG
 from MCTS import MCTS
+from NeuralNetowrk import NeuralNetwork
 
 class System:
     def __init__(self):
@@ -24,7 +25,7 @@ class System:
 
     def initialize_nn(self):
         """Initialize the neural network."""
-        self.nn = NN(CONFIG["nn"])
+        self.nn = NeuralNetwork(CONFIG["nn"])
 
     def train(self):
         """Main training loop over episodes."""
@@ -79,8 +80,8 @@ class System:
 
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
-        self.w = self.nn.w
-        self.q = self.nn.q
+        self.w = self.game.w
+        self.q = self.game.q
 
         for _ in range(self.mbs):
             Eb = random.choice(self.EH)
