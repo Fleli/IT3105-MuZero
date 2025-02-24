@@ -1,0 +1,2 @@
+from NeuralNetwork.NeuralNetwork import NeuralNetwork
+from NeuralNetwork.NeuralNetworkLayer import NeuralNetworkLayer
