@@ -1,61 +1,37 @@
-import numpy as np
-
+import jax.numpy as jnp
 
 class NeuralNetworkLayer:
     
     is_input_layer = False
-    
-    activation_function: any  # sigmoid, etc.
-    
+    activation_function: any
     n_neurons: int
-    
     previous_layer: any
-    
-    _ACTIVATION_FUNCTIONS = {
-        "sigmoid": lambda x: 1 / (1 + np.e ** (-x)),
-        "identity": lambda x: x,
-        "relu": lambda x: max(x, 0),
-        "tanh": lambda x: (np.e ** x - 1) / (2 * np.e ** x)
-    }
 
-    def __init__(self, n_neurons, previous_layer, activation_function, include_bias: bool):
-        
+    def __init__(self, n_neurons, activation_function, params, include_bias: bool):
+        self.parameters = params
         self.n_neurons = n_neurons
+        self.include_bias = include_bias
+        
         if isinstance(activation_function, str):
-            self.activation_function = self._ACTIVATION_FUNCTIONS[activation_function]
+            if activation_function == "sigmoid":
+                self.activation_function = lambda x: 1 / (1 + jnp.exp(-x))
+            elif activation_function == "relu":
+                self.activation_function = lambda x: jnp.maximum(x, 0)
+            elif activation_function == "tanh":
+                self.activation_function = jnp.tanh
+            elif activation_function == "identity":
+                self.activation_function = lambda x: x
+            else:
+                raise ValueError("Unsupported activation function")
         else:
             self.activation_function = activation_function
-        
-        if previous_layer is None:
-            self.is_input_layer = True
-            return
-        
-        self.include_bias = include_bias
-        self.previous_layer = previous_layer
-        
-    def compute_output(self, input: list[float], params) -> float:
-        
-        if self.is_input_layer:
-            return input
-        
-        weights = {
-            (from_neuron, to_neuron) : params[ from_neuron + to_neuron * self.n_neurons ]
-            for from_neuron in range(self.previous_layer.n_neurons)
-            for to_neuron in range(self.n_neurons)
-        }
-        
-        if self.include_bias:
-            b0 = self.n_neurons * self.previous_layer.n_neurons
-            biases = params[b0 : b0 + self.n_neurons]
-            output_of_previous = self.previous_layer.compute_output(input, params[b0 + self.n_neurons : ])
-        else:
-            output_of_previous = self.previous_layer.compute_output(input, params[self.n_neurons : ])
-        
-        values = []
-        for neuron in range(self.n_neurons):        # Skift ut med matrisemultiplikasjon
-            values.append(biases[neuron] if self.include_bias else 0)
-            for previous in range(self.previous_layer.n_neurons):
-                values[neuron] += weights[previous, neuron] * output_of_previous[previous]
-            values[neuron] = self.activation_function( values[neuron] )
-        
-        return values
+
+    def compute_output(self, input: jnp.ndarray, hidden_state: jnp.ndarray = None, params = None) -> jnp.ndarray:
+        if params is None:
+            params = self.parameters
+        z = jnp.dot(params["weights"], input) 
+        if hidden_state is not None and params.get("hidden_weights", None) is not None:
+            z = z + jnp.dot(params["hidden_weights"], hidden_state)
+        if self.include_bias and params.get("bias", None) is not None:
+            z = z + params["bias"]
+        return self.activation_function(z)
