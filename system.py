@@ -1,7 +1,7 @@
 import random
 from Config import CONFIG
 from MCTS import MCTS
-from NeuralNetowrk import NeuralNetwork
+from NeuralNetwork import NeuralNetwork
 
 class System:
     def __init__(self):
