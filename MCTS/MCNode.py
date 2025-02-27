@@ -1,6 +1,6 @@
 
 from Game.Game import *
-from Conventions import *
+from MCTS.Conventions import *
 from MCTS.MCTSTypes import *
 from NeuralNetwork.NeuralNetwork import *
 
@@ -59,7 +59,7 @@ class MCNode():
     def biased_get_random_action(self) -> Action:
         actions = list(self.children.keys())  # TODO: This is probably quite slow. Find better way to accomplish the same thing.
         weights = [ self.children[action].visits_to_self for action in actions ]
-        return weighted_choice(actions, weights=weights)
+        return weighted_choice(actions, weights=weights)[0]
     
     
     # A node is considered a leaf if it has no children.
