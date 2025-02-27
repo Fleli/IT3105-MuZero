@@ -29,7 +29,7 @@ class MCTS():
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
-    def search( self, N_rollouts: int, concrete_game_states: list[ConcreteGameState] ) -> Action:
+    def search(self, N_rollouts: int, concrete_game_states: list[ConcreteGameState]) -> Action:
         
         self.log("Search for next actual move")
         
@@ -42,16 +42,14 @@ class MCTS():
             self.log(f" -> Simulation {simulation + 1} / {N_rollouts}")
             
             current_node = root
-            explored = [root]
             
             while not current_node.is_leaf_node(): 
                 action = self._tree_policy(current_node)
                 current_node = current_node.children[action]
-                explored.append(current_node)
             
             current_node.expand()
             child = current_node.uniform_get_random_child()
-            self._rollout(child, explored, self._rollout_depth)
+            self._rollout(child, self._rollout_depth)
         
         # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
@@ -62,7 +60,7 @@ class MCTS():
     
     
     # Do a rollout to a certain depth, and backpropagate the result afterwards.
-    def _rollout(self, leaf: MCNode, explored: list[MCNode], rollout_depth: int):
+    def _rollout(self, leaf: MCNode, rollout_depth: int):
         
         node = leaf
         
@@ -71,7 +69,6 @@ class MCTS():
             node.expand()
             action = self._default_policy(node)
             node = node.children[action]
-            explored.append(node)
         
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
         evaluation, _ = prediction_network_output(self.prediction_network.predict(node.state))
