@@ -1,6 +1,6 @@
 
 from Game.Game import *
-from Conventions import *
+from MCTS.Conventions import *
 from MCTS.MCTSTypes import *
 from NeuralNetwork.NeuralNetwork import *
 

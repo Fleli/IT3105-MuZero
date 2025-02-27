@@ -2,10 +2,10 @@
 from random import choices as weighted_choice
 
 from Game.Game import *
-from Conventions import *
+from MCTS.Conventions import *
 from NeuralNetwork.NeuralNetwork import *
 
-from MCNode import *
+from MCTS.MCNode import *
 
 class MCTS():
     

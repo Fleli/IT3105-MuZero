@@ -1,5 +1,5 @@
 
-from MCTSTypes import *
+from MCTS.MCTSTypes import *
 
 # State, Action -> Dynamics Network Input
 def dynamics_network_input(state: AbstractState, action: Action) -> list[float]:
