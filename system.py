@@ -54,12 +54,10 @@ class System:
         """Perform one step in the episode, returning collected data."""
         phi_k = self.game.gather_states(state, k)
 
-        pi_k, v_k = self.mcts.search(self.num_searches, phi_k)
-
-        action_k = self.mcst.sample_action(pi_k)
+        action_k, visit_dist, root_value = self.mcts.search(self.num_searches, phi_k)
         next_state, next_reward = self.game.simulate(state, action_k)
-        
-        return [state, v_k, pi_k, action_k, next_reward]
+
+        return [state, root_value, visit_dist, action_k, next_reward]
     
     # def search(self, tree_root):
     #     """Perform tree search and return action distribution and value estimate."""
