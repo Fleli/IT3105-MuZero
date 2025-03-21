@@ -29,7 +29,7 @@ class MCTS():
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
-    def search(self, N_rollouts: int, concrete_game_states: list[ConcreteGameState]) -> Action:
+    def search(self, N_rollouts: int, concrete_game_states: list[ConcreteGameState]) -> tuple[Action, dict, float]:
         
         self.log("Search for next actual move")
         
@@ -56,7 +56,7 @@ class MCTS():
         # mot denne siden.
         
         # Get random child, probability weighted to favor those branches that are explored the most.
-        return root.biased_get_random_action()
+        return root.biased_get_random_action(), root.visit_counts, root.sum_evaluation
     
     
     # Do a rollout to a certain depth, and backpropagate the result afterwards.
