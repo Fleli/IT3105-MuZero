@@ -3,6 +3,50 @@ from Config import CONFIG
 from MCTS import MCTS
 from NeuralNetwork import NeuralNetwork
 
+import random
+import gym
+import jax
+import jax.numpy as jnp
+from Config import CONFIG
+
+import numpy as np
+if not hasattr(np, 'bool8'):
+    np.bool8 = np.bool_
+
+class GymGame:
+    def __init__(self, config):
+        self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
+        self.w = config.get("w", 5)  
+        self.q = config.get("q", 5)  
+
+    def reset(self):
+        result = self.env.reset()
+        if isinstance(result, tuple):
+            observation, _ = result
+        else:
+            observation = result
+        return observation
+
+    def simulate(self, state, action):
+        result = self.env.step(action)
+        if len(result) == 5:
+            next_state, reward, terminated, truncated, info = result
+        else:
+            next_state, reward, terminated, info = result
+        self.terminated = terminated or (len(result) == 5 and truncated)
+        if isinstance(next_state, tuple):
+            next_state = next_state[0]
+        return next_state, reward
+
+    def gather_states(self, state, k):
+        return state
+
+    def action_space(self):
+        return list(range(self.env.action_space.n))
+
+    def render(self):
+        self.env.render()
+
 class System:
     def __init__(self):
         self.Ne = CONFIG["num_episodes"]
@@ -23,7 +67,7 @@ class System:
         """Initialize the game environment."""
         # May only have one game
         if self.game_type == "gym":
-            game = Gym(CONFIG["flappy_bird"])
+            game = GymGame(CONFIG["gym"])
 
         return game
 
@@ -75,3 +119,9 @@ class System:
             rewards = [Eb[i][4] for i in range(k + 1, k + self.w + 1)]
             
             self.nn.do_bptt(states, actions, policies, values, rewards)
+
+
+if __name__ == '__main__':
+    system = System()
+    system.train()
+
