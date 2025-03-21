@@ -24,10 +24,16 @@ class MCNode():
     visit_counts: dict[Action, int] = {}
     sum_evaluation: float = 0
     
+    action_from_parent: Action = None
     
-    def __init__(self, state: AbstractState, parent: MCNode):
+    
+    def __init__(self, state: AbstractState, parent: MCNode, action_from_parent: Action):
+        
+        print(f"Init node with state={state}")
+        
         self.state = state
         self.parent = parent
+        self.action_from_parent = action_from_parent
     
     
     # Generate the children of this node.
@@ -37,18 +43,22 @@ class MCNode():
         
         action_space = game.action_space()
         
+        print("Action space", action_space)
+        print("Self state:", self.state)
+        
         for action in action_space:
             network_input = dynamics_network_input(self.state, action)
-            next_abstract_state = dynamics_network(network_input)
-            child = MCNode(next_abstract_state, self)
+            nn_output, _dynamics_hidden = dynamics_network.predict(network_input)
+            _, next_abstract_state = dynamics_network_output(nn_output)
+            child = MCNode(next_abstract_state, self, action)
             self.children[action] = child
     
     
     # Randomly choose a child and return it. Uniform distribution.
     # Save the action for later. It's used during backpropagation.
     def uniform_get_random_child(self) -> MCNode:
-        self.action_taken = uniform_choice(self.children.keys())
-        child = self.children[self.action_taken]
+        action = uniform_choice(list(self.children.keys()))
+        child = self.children[action]
         return child
     
     
@@ -69,13 +79,13 @@ class MCNode():
     
     # u(a) is the exploration bonus of action a
     def u(self, action: Action) -> float:
-        N_sa = self.visit_counts[action]
+        N_sa = self.visit_counts[action] if action in self.visit_counts else 0
         return self._c * math.sqrt( math.log2(self.visits_to_self) / (1 + N_sa) )
     
     
     # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
-        return self.sum_evaluation / self.visit_counts[action]
+        return self.sum_evaluation / (self.visit_counts[action] if action in self.visit_counts else 1)
     
     
     # Backpropagate the value up through the tree.
@@ -85,10 +95,11 @@ class MCNode():
         self.sum_evaluation += value
         self.visits_to_self += 1
         
-        if self.visit_counts[self.action_taken] is None:
-            self.visit_counts[self.action_taken] = 0
-        self.visit_counts[self.action_taken] += 1
-        
+        if self.action_from_parent is not None:
+            if self.action_from_parent not in self.parent.visit_counts:
+                self.parent.visit_counts[self.action_from_parent] = 0
+            self.parent.visit_counts[self.action_from_parent] += 1
+            
         if self.parent is None:
             return
         

@@ -39,7 +39,9 @@ class GymGame:
         return next_state, reward
 
     def gather_states(self, state, k):
-        return state
+        initial_states = [0.0 for _ in range(k - 1)] + [state]
+        print(initial_states)
+        return jnp.array(initial_states)
 
     def action_space(self):
         return list(range(self.env.action_space.n))

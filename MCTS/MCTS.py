@@ -7,6 +7,8 @@ from NeuralNetwork.NeuralNetwork import *
 
 from MCTS.MCNode import *
 
+import jax.numpy as jnp
+
 class MCTS():
     
     _rollout_depth = 1
@@ -29,13 +31,18 @@ class MCTS():
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
-    def search(self, N_rollouts: int, concrete_game_states: list[ConcreteGameState]) -> tuple[Action, dict, float]:
+    def search(self, N_rollouts: int, concrete_game_states: jax.Array) -> tuple[Action, dict, float]:
         
         self.log("Search for next actual move")
         
-        abstract_state: AbstractState = self.representation_network.predict(concrete_game_states)
+        print("Concrete game states:", concrete_game_states)
+        flattened_states = concrete_game_states.flatten()
+        print("Flattened states:", flattened_states)
+        abstract_state, _representation_hidden = self.representation_network.predict(flattened_states)
         
-        root = MCNode(abstract_state, None)
+        print("Abstract state returned:", abstract_state)
+        
+        root = MCNode(abstract_state, None, None)
         
         for simulation in range(N_rollouts):
             
@@ -44,12 +51,13 @@ class MCTS():
             current_node = root
             
             while not current_node.is_leaf_node(): 
+                print(f"[in while loop] current_node={current_node}")
                 action = self._tree_policy(current_node)
+                print(f"action={action}")
                 current_node = current_node.children[action]
             
-            current_node.expand()
-            child = current_node.uniform_get_random_child()
-            self._rollout(child, self._rollout_depth)
+            print(f"{self.search.__name__}: Will expand current node (finished tree policy down to leaf)")
+            self._rollout(current_node, self._rollout_depth)
         
         # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
@@ -66,12 +74,17 @@ class MCTS():
         
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
-            node.expand()
+            node.expand(self.game, self.dynamics_network)
             action = self._default_policy(node)
             node = node.children[action]
         
+        print(f"{self._rollout.__name__}:")
+        print("\tWill find evaluation")
+        print(f"\tnode.state={node.state}")
+        
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
-        evaluation, _ = prediction_network_output(self.prediction_network.predict(node.state))
+        nn_output, _prediction_hidden = self.prediction_network.predict(node.state)
+        evaluation, _ = prediction_network_output(nn_output)
         discount_factor = 1     # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         node.backpropagate(evaluation, discount_factor)
     
@@ -91,8 +104,13 @@ class MCTS():
     
     # Choose a random move with weighted probabilities using the prediction network.
     def _default_policy(self, node: MCNode) -> Action:
-        action_space: list[Action] = self.game.action_space()    # List of actions? Need to agree on interface here.
-        probabilities = prediction_network_output(self.prediction_network.predict(node.state))
+        print(f"{self._default_policy.__name__}:")
+        action_space = self.game.action_space()    # List of actions? Need to agree on interface here.
+        print(f"\taction_space={action_space}")
+        prediction, _prediction_hidden = self.prediction_network.predict(node.state)
+        print(f"\tprediction={prediction}")
+        _, probabilities = prediction_network_output(prediction)
+        print(f"\tprobabilities={probabilities}")
         return weighted_choice(action_space, probabilities)[0]
     
     
