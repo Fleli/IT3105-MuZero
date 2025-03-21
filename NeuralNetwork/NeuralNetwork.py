@@ -11,7 +11,12 @@ class NeuralNetwork:
     output_layer: NeuralNetworkLayer
     input_layer: NeuralNetworkLayer
 
-    def __init__(self, input_dim: int, layers: list[int], output_dim: int, activation_function, include_bias: bool):
+    def __init__(self, config):
+        input_dim = config['input_dim']
+        layers = config['layers']
+        output_dim = config['output_dim']
+        activation_function = config['activation_function']
+        include_bias = config['include_bias']
         self.input_layer = NeuralNetworkLayer(
             n_neurons=layers[0],
             activation_function=activation_function,

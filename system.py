@@ -12,25 +12,22 @@ class System:
         self.It = CONFIG["training_interval"]
         self.mbs = CONFIG["minibatch_size"]
         self.game_type = CONFIG["game"]
-        self.mcts = MCTS()
+        self.dynamic = NeuralNetwork(CONFIG["dynamics_nn"])
+        self.prediction = NeuralNetwork(CONFIG["prediction_nn"])
+        self.representation = NeuralNetwork(CONFIG["representation_nn"])
+        self.game = self.initialize_game()
+        self.mcts = MCTS(self.game, self.dynamic, self.prediction, self.representation)
         self.EH = []
 
     def initialize_game(self):
         """Initialize the game environment."""
         # May only have one game
-        if self.game_type == "flappy_bird":
-            self.game = FlappyBird(CONFIG["flappy_bird"])
-        elif self.game_type == "pong":
-            self.game = Pong(CONFIG["pong"])
+        if self.game_type == "gym":
+            self.game = Gym(CONFIG["flappy_bird"])
 
-    def initialize_nn(self):
-        """Initialize the neural network."""
-        self.nn = NeuralNetwork(CONFIG["nn"])
 
     def train(self):
         """Main training loop over episodes."""
-        self.game = self.initialize_game()
-        self.nn = self.initialize_nn()
 
         for episode in range(self.Ne):
             epidata = self.episode()
