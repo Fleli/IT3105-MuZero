@@ -58,21 +58,6 @@ class System:
         next_state, next_reward = self.game.simulate(state, action_k)
 
         return [state, root_value, visit_dist, action_k, next_reward]
-    
-    # def search(self, tree_root):
-    #     """Perform tree search and return action distribution and value estimate."""
-    #     for m in range(self.Ms):
-    #         leaf = self.mcst.tree_policy(tree_root)
-    #         self.mcst.expand_tree(leaf)
-
-    #         if leaf.children: # If leaf is not terminal
-    #             c_star = random.choice(leaf.children)  # Choose a random child node
-    #             accum_reward = self.mcst.rollout(c_star, self.dmax - c_star.depth, self.nn)
-    #             self.mcst.backpropagate(c_star, tree_root, accum_reward)
-        
-    #     pi_k = self.mcst.get_visit_distribution(tree_root)
-    #     v_k = self.mcst.get_root_value(tree_root)
-    #     return pi_k, v_k
 
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
