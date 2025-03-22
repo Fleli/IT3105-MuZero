@@ -5,11 +5,15 @@ import jax
 import jax.numpy as jnp
 
 # State, Action -> Dynamics Network Input
-def dynamics_network_input(state: AbstractState, action: Action) -> jax.Array:
-    print(f"\n{dynamics_network_input.__name__}\nstate={state}\naction={action}")
-    print(type(state), state[0])
-    print(state[1])
+def dynamics_network_input(state: AbstractState, action: Action, verbose=False) -> jax.Array:
+    
+    if verbose:
+        print(f"\n{dynamics_network_input.__name__}\nstate={state}\naction={action}")
+        print(type(state), state[0])
+        print(state[1])
+    
     inp = jnp.insert(state, 0, action)
+    
     return inp
 
 # Dynamics Network Output -> Reward, Abstract State

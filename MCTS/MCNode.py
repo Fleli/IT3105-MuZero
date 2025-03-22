@@ -29,8 +29,6 @@ class MCNode():
     
     def __init__(self, state: AbstractState, parent: MCNode, action_from_parent: Action):
         
-        print(f"Init node with state={state}")
-        
         self.state = state
         self.parent = parent
         self.action_from_parent = action_from_parent
@@ -48,18 +46,12 @@ class MCNode():
         
         action_space = game.action_space()
         
-        print("Action space", action_space)
-        print("Self state:", self.state)
-        
-        print(f"\tGenerating children of {self.__str__()}")
         for action in action_space:
             network_input = dynamics_network_input(self.state, action)
             nn_output, _dynamics_hidden = dynamics_network.predict(network_input)
             _, next_abstract_state = dynamics_network_output(nn_output)
             child = MCNode(next_abstract_state, self, action)
-            print(f"\t -> Generated (and added to child list of {self.__str__()}) node {child.__str__()}")
             self.children[action] = child
-            print(f"Children of child ({child}) of self ({self}) are {child.children}")
     
     
     # Randomly choose a child and return it. Uniform distribution.

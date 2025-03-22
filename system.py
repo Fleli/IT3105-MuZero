@@ -14,45 +14,70 @@ if not hasattr(np, 'bool8'):
     np.bool8 = np.bool_
 
 class GymGame:
+    
     def __init__(self, config):
+        self.state_history = []
+        self.w = config.get("w", 5)
+        self.q = config.get("q", 5)
         self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
-        self.w = config.get("w", 5)  
-        self.q = config.get("q", 5)  
-
+    
+    
     def reset(self):
+        
+        self.state_history = []
         result = self.env.reset()
+        
         if isinstance(result, tuple):
             observation, _ = result
         else:
             observation = result
+        
         return observation
-
+    
+    
     def simulate(self, state, action):
+        
         result = self.env.step(action)
+        
         if len(result) == 5:
             next_state, reward, terminated, truncated, info = result
         else:
             next_state, reward, terminated, info = result
         self.terminated = terminated or (len(result) == 5 and truncated)
+        
         if isinstance(next_state, tuple):
             next_state = next_state[0]
+        
+        self.state_history.append(next_state)
+        
         return next_state, reward
-
+    
+    
     def gather_states(self, state, k):
-        k_states = []
-        for i in range(k - 1):
-            k_states.append(jnp.zeros_like(state))
-        k_states.append(state)
-        print(f"[gather_states] k_states={k_states}")
-        return jnp.array(k_states)
-
+        
+        states = []
+        
+        # [ s_(k-q) , ... , s_k ]
+        for state_index in range(k - self.q, k + 1):
+            if state_index <= 0:
+                states.append(jnp.zeros_like(state))
+            else:
+                states.append(self.state_history[state_index - 1])
+        
+        return jnp.array(states)
+    
+    
     def action_space(self):
         return list(range(self.env.action_space.n))
-
+    
+    
     def render(self):
         self.env.render()
 
+
+
 class System:
+    
     def __init__(self):
         self.Ne = CONFIG["num_episodes"]
         self.Nes = CONFIG["num_episode_steps"]
@@ -67,7 +92,7 @@ class System:
         self.game = self.initialize_game()
         self.mcts = MCTS(self.game, self.dynamic, self.prediction, self.representation)
         self.EH = []
-
+    
     def initialize_game(self):
         """Initialize the game environment."""
         # May only have one game
@@ -75,8 +100,8 @@ class System:
             game = GymGame(CONFIG["gym"])
 
         return game
-
-
+    
+    
     def train(self):
         """Main training loop over episodes."""
 
@@ -86,12 +111,13 @@ class System:
 
             if episode % self.It == 0:
                 self.do_bptt_training(self.EH, self.mbs)
-
+    
+    
     def episode(self):
         """Run a single episode and return collected data."""
         state = self.game.reset()
         epidata = []
-
+        
         for k in range(self.Nes):
             step_data = self.step(state, k)
             epidata.append(step_data)
@@ -99,17 +125,19 @@ class System:
 
         return epidata
     
+    
     def step(self, state, k):
         """Perform one step in the episode, returning collected data."""
         phi_k = self.game.gather_states(state, k)
-        
-        print(f"[in step]: phi_k={phi_k}")
 
         action_k, visit_dist, root_value = self.mcts.search(self.num_searches, phi_k)
         next_state, next_reward = self.game.simulate(state, action_k)
-
-        return [state, root_value, visit_dist, action_k, next_reward]
-
+        
+        # TODO: Det sto [state, ...] her. Har endret til [next_state, ...] fordi vi skal vel ha den neste staten
+        # til neste step? Dobbeltsjekk.
+        return [next_state, root_value, visit_dist, action_k, next_reward]
+    
+    
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
         self.w = self.game.w
@@ -129,6 +157,6 @@ class System:
 
 
 if __name__ == '__main__':
+    
     system = System()
     system.train()
-

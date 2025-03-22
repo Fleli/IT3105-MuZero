@@ -1,7 +1,7 @@
 CONFIG = {
     "num_episodes": 100000,
     "num_episode_steps": 1000,
-    "num_searches": 10,
+    "num_searches": 20,
     "max_depth": 10,
     "training_interval": 10,
     "minibatch_size": 64,
@@ -10,7 +10,7 @@ CONFIG = {
     "gym": {
         "env_name": "CartPole-v1",
         "w": 5,   
-        "q": 5    
+        "q": 0
     },
     "dynamics_nn": {
         "input_dim": 4 + 1,  
