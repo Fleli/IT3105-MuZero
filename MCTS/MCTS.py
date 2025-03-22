@@ -9,7 +9,11 @@ from MCTS.MCNode import *
 
 import jax.numpy as jnp
 
+ID = 0
+
 class MCTS():
+    
+    id: int
     
     _rollout_depth = 1
     _verbose = True
@@ -26,6 +30,10 @@ class MCTS():
         self.dynamics_network = dynamics
         self.prediction_network = prediction
         self.representation_network = representation
+        
+        global ID
+        self.id = ID
+        ID += 1
     
     
     # Do a Monte Carlo Tree Search
@@ -44,6 +52,8 @@ class MCTS():
         
         root = MCNode(abstract_state, None, None)
         
+        print(f"Address of root:", root.__str__())
+        
         for simulation in range(N_rollouts):
             
             self.log(f" -> Simulation {simulation + 1} / {N_rollouts}")
@@ -51,10 +61,12 @@ class MCTS():
             current_node = root
             
             while not current_node.is_leaf_node(): 
-                print(f"[in while loop] current_node={current_node}")
+                print(f"[in while loop] current_node={current_node.__str__()}")
+                print(f"[children]: {[value.__str__() for key, value in current_node.children.items()]}")
                 action = self._tree_policy(current_node)
                 print(f"action={action}")
                 current_node = current_node.children[action]
+                print(f"[children after reassignment]: {[value.__str__() for key, value in current_node.children.items()]}")
             
             print(f"{self.search.__name__}: Will expand current node (finished tree policy down to leaf)")
             self._rollout(current_node, self._rollout_depth)
@@ -69,6 +81,9 @@ class MCTS():
     
     # Do a rollout to a certain depth, and backpropagate the result afterwards.
     def _rollout(self, leaf: MCNode, rollout_depth: int):
+        
+        print(f" [in rollout] leaf={leaf}")
+        print(f" [----------] children={leaf.children}")
         
         node = leaf
         
@@ -95,7 +110,9 @@ class MCTS():
         best_action = None
         best_evaluation = 0.0  # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
         for action in action_space:
+            print(f"\n\t\t -> action={action}")
             evaluation = node.Q(action) + node.u(action)
+            print(f"\t\t -> evaluation={evaluation}")
             if evaluation > best_evaluation:
                 best_action = action
                 best_evaluation = evaluation
@@ -118,4 +135,9 @@ class MCTS():
     def log(self, content: str):
         if self._verbose:
             print(content)
+            
+            
+    def __str__(self):
+        return str(self.id)
+    
     

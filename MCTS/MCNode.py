@@ -15,14 +15,14 @@ class MCNode():
     _c = 1
     
     state: AbstractState
-    children: dict[Action, MCNode] = {}
+    children: dict[Action, MCNode]
     
     parent: MCNode
     action_taken: Action
     
-    visits_to_self = 0
-    visit_counts: dict[Action, int] = {}
-    sum_evaluation: float = 0
+    visits_to_self: int
+    visit_counts: dict[Action, int]
+    sum_evaluation: float
     
     action_from_parent: Action = None
     
@@ -34,6 +34,11 @@ class MCNode():
         self.state = state
         self.parent = parent
         self.action_from_parent = action_from_parent
+        
+        self.children = {}
+        self.visit_counts = {}
+        self.visits_to_self = 0
+        self.sum_evaluation = 0
     
     
     # Generate the children of this node.
@@ -46,12 +51,15 @@ class MCNode():
         print("Action space", action_space)
         print("Self state:", self.state)
         
+        print(f"\tGenerating children of {self.__str__()}")
         for action in action_space:
             network_input = dynamics_network_input(self.state, action)
             nn_output, _dynamics_hidden = dynamics_network.predict(network_input)
             _, next_abstract_state = dynamics_network_output(nn_output)
             child = MCNode(next_abstract_state, self, action)
+            print(f"\t -> Generated (and added to child list of {self.__str__()}) node {child.__str__()}")
             self.children[action] = child
+            print(f"Children of child ({child}) of self ({self}) are {child.children}")
     
     
     # Randomly choose a child and return it. Uniform distribution.

@@ -39,9 +39,12 @@ class GymGame:
         return next_state, reward
 
     def gather_states(self, state, k):
-        initial_states = [0.0 for _ in range(k - 1)] + [state]
-        print(initial_states)
-        return jnp.array(initial_states)
+        k_states = []
+        for i in range(k - 1):
+            k_states.append(jnp.zeros_like(state))
+        k_states.append(state)
+        print(f"[gather_states] k_states={k_states}")
+        return jnp.array(k_states)
 
     def action_space(self):
         return list(range(self.env.action_space.n))
@@ -99,6 +102,8 @@ class System:
     def step(self, state, k):
         """Perform one step in the episode, returning collected data."""
         phi_k = self.game.gather_states(state, k)
+        
+        print(f"[in step]: phi_k={phi_k}")
 
         action_k, visit_dist, root_value = self.mcts.search(self.num_searches, phi_k)
         next_state, next_reward = self.game.simulate(state, action_k)
