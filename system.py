@@ -43,7 +43,10 @@ class GymGame:
             next_state, reward, terminated, truncated, info = result
         else:
             next_state, reward, terminated, info = result
+        
         self.terminated = terminated or (len(result) == 5 and truncated)
+        
+        print(self.terminated)
         
         if isinstance(next_state, tuple):
             next_state = next_state[0]
@@ -57,14 +60,13 @@ class GymGame:
         
         states = []
         
-        # [ s_(k-q) , ... , s_k ]
-        for state_index in range(k - self.q, k + 1):
+        for state_index in range(k - self.q, k):
             if state_index <= 0:
                 states.append(jnp.zeros_like(state))
             else:
-                states.append(self.state_history[state_index - 1])
+                states.append(self.state_history[state_index])
         
-        return jnp.array(states)
+        return jnp.array(states + [state])
     
     
     def action_space(self):
@@ -86,12 +88,13 @@ class System:
         self.It = CONFIG["training_interval"]
         self.mbs = CONFIG["minibatch_size"]
         self.game_type = CONFIG["game"]
-        self.dynamic = NeuralNetwork(CONFIG["dynamics_nn"])
+        self.dynamics = NeuralNetwork(CONFIG["dynamics_nn"])
         self.prediction = NeuralNetwork(CONFIG["prediction_nn"])
         self.representation = NeuralNetwork(CONFIG["representation_nn"])
         self.game = self.initialize_game()
-        self.mcts = MCTS(self.game, self.dynamic, self.prediction, self.representation)
+        self.mcts = MCTS(self.game, self.dynamics, self.prediction, self.representation)
         self.EH = []
+    
     
     def initialize_game(self):
         """Initialize the game environment."""
@@ -104,19 +107,21 @@ class System:
     
     def train(self):
         """Main training loop over episodes."""
-
         for episode in range(self.Ne):
             epidata = self.episode()
             self.EH.append(epidata)
-
+            
             if episode % self.It == 0:
-                self.do_bptt_training(self.EH, self.mbs)
+                # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
+                self.do_bptt_training()
     
     
     def episode(self):
         """Run a single episode and return collected data."""
         state = self.game.reset()
         epidata = []
+        
+        print(f"episode. Note self.Nes={self.Nes}")
         
         for k in range(self.Nes):
             step_data = self.step(state, k)

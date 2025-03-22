@@ -7,13 +7,7 @@ from NeuralNetwork.NeuralNetwork import *
 
 from MCTS.MCNode import *
 
-import jax.numpy as jnp
-
-ID = 0
-
 class MCTS():
-    
-    id: int
     
     _rollout_depth = 1
     _verbose = False
@@ -24,16 +18,13 @@ class MCTS():
     prediction_network: NeuralNetwork       # (Abstract state k) -> (Value k)
     representation_network: NeuralNetwork   # (Concrete states k, k-1, ..., k-q) -> (Abstract state k)
     
+    
     # Initialize with Game plus three NNs
     def __init__(self, game: AbstractGame, dynamics: NeuralNetwork, prediction: NeuralNetwork, representation: NeuralNetwork):
         self.game = game
         self.dynamics_network = dynamics
         self.prediction_network = prediction
         self.representation_network = representation
-        
-        global ID
-        self.id = ID
-        ID += 1
     
     
     # Do a Monte Carlo Tree Search
@@ -41,13 +32,11 @@ class MCTS():
     # - output: The concrete move that is (hopefully) optimal
     def search(self, N_rollouts: int, concrete_game_states: jax.Array) -> tuple[Action, dict, float]:
         
-        self.log("Search for next actual move")
-        
-        self.log(f"Concrete game states ( \n{concrete_game_states} )\n")
         flattened_states = concrete_game_states.flatten()
-        self.log(f"Flattened states:{flattened_states}")
         abstract_state, _representation_hidden = self.representation_network.predict(flattened_states)
         
+        self.log(f"Concrete game states ( \n{concrete_game_states} )\n")
+        self.log(f"Flattened states:{flattened_states}")
         self.log(f"Abstract state returned:{abstract_state}")
         
         root = MCNode(abstract_state, None, None)
@@ -69,7 +58,14 @@ class MCTS():
         # mot denne siden.
         
         # Get random child, probability weighted to favor those branches that are explored the most.
-        return root.biased_get_random_action(), root.visit_counts, root.sum_evaluation
+        results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation
+        
+        print("MCTS Results:")
+        print(f" -> Action {results[0]}")
+        print(f" -> Visits {results[1]}")
+        print(f" -> Eval {results[2]}")
+        
+        return results
     
     
     # Do a rollout to a certain depth, and backpropagate the result afterwards.
@@ -119,9 +115,3 @@ class MCTS():
     def log(self, content: str):
         if self._verbose:
             print(content)
-            
-            
-    def __str__(self):
-        return str(self.id)
-    
-    
