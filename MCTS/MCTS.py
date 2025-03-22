@@ -60,10 +60,10 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation
         
-        print("MCTS Results:")
-        print(f" -> Action {results[0]}")
-        print(f" -> Visits {results[1]}")
-        print(f" -> Eval {results[2]}")
+        self.log("MCTS Results:")
+        self.log(f" -> Action {results[0]}")
+        self.log(f" -> Visits {results[1]}")
+        self.log(f" -> Eval {results[2]}")
         
         return results
     
