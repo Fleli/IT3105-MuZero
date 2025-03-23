@@ -43,11 +43,12 @@ class MCTS():
         
         for simulation in range(N_rollouts):
             
-            self.log(f" -> Simulation {simulation + 1} / {N_rollouts}")
+            self.log(f" -> Simulation {simulation + 1} / {N_rollouts}", force=True)
             
             current_node = root
             
-            while not current_node.is_leaf_node(): 
+            while not current_node.is_leaf_node():
+                print(f"[in while] current={current_node.__hash__()}, children={[f"{child.__hash__()}" for action, child in current_node.children.items()]}")
                 action = self._tree_policy(current_node)
                 current_node = current_node.children[action]
             
@@ -60,10 +61,10 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation
         
-        self.log("MCTS Results:")
-        self.log(f" -> Action {results[0]}")
-        self.log(f" -> Visits {results[1]}")
-        self.log(f" -> Eval {results[2]}")
+        self.log("MCTS Results:", force=True)
+        self.log(f" -> Action {results[0]}", force=True)
+        self.log(f" -> Visits {results[1]}", force=True)
+        self.log(f" -> Eval {results[2]}", force=True)
         
         return results
     
@@ -112,6 +113,6 @@ class MCTS():
     
     
     # Print a string if the verbose setting is True.
-    def log(self, content: str):
-        if self._verbose:
+    def log(self, content: str, force=False):
+        if self._verbose or force:
             print(content)
