@@ -114,6 +114,8 @@ class System:
             if episode % self.training_int == 0:
                 # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
+
+        return self.dynamics, self.prediction, self.representation
     
     
     def episode(self):
