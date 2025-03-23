@@ -158,7 +158,9 @@ class System:
             values = [Eb[i][1] for i in range(k, k + self.w + 1)]
             rewards = [Eb[i][4] for i in range(k + 1, k + self.w + 1)]
             
-            self.nn.do_bptt(states, actions, policies, values, rewards)
+            self.representation.BPTT(states, actions, policies, values, rewards)
+            self.prediction.BPTT(states, actions, policies, values, rewards)
+            self.dynamics.BPTT(states, actions, policies, values, rewards)
 
 
 if __name__ == '__main__':
