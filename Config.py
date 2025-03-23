@@ -18,6 +18,8 @@ CONFIG = {
         "output_dim": 4 + 1,  
         "activation_function": "tanh",
         "include_bias": True,
+        "k": 1,
+        "learning_rate": 0.01
     },
     
     "prediction_nn": {
@@ -26,6 +28,8 @@ CONFIG = {
         "output_dim": 3,
         "activation_function": "tanh",
         "include_bias": True,
+        "k": 1,
+        "learning_rate": 0.01
     },
     
     
@@ -35,5 +39,7 @@ CONFIG = {
         "output_dim": 4,  
         "activation_function": "tanh",
         "include_bias": True,
+        "k": 1,
+        "learning_rate": 0.01
     }
 }

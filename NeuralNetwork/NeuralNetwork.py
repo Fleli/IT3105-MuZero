@@ -17,6 +17,8 @@ class NeuralNetwork:
         output_dim = config['output_dim']
         activation_function = config['activation_function']
         include_bias = config['include_bias']
+        self.k = config['k']
+        self.learning_rate = config['learning_rate']
         self.input_layer = NeuralNetworkLayer(
             n_neurons=layers[0],
             activation_function=activation_function,
@@ -87,7 +89,7 @@ class NeuralNetwork:
         grad_layer_parameters = jax.grad(loss_fn)(self.layer_parameters)
         return grad_layer_parameters
 
-    def BPTT(self, inputs, targets, initial_state, learning_rate, k):
+    def BPTT(self, inputs, targets, initial_state):
         T = len(inputs) 
 
         state = initial_state
@@ -103,7 +105,7 @@ class NeuralNetwork:
             stored_inputs.append(inputs[t])
             stored_targets.append(targets[t])
 
-            if ((t + 1) % k == 0) or (t == T - 1):
+            if ((t + 1) % self.k == 0) or (t == T - 1):
                 block_length = len(stored_inputs)
                 block_offset = t - block_length + 1
 
@@ -116,7 +118,7 @@ class NeuralNetwork:
                     grad_layer_parameters = jax.tree_map(lambda g1, g2: g1 + g2,
                                                          grad_layer_parameters, grad_param_j)
                 
-                self.layer_parameters = jax.tree_map(lambda param, grad: param - learning_rate * grad,
+                self.layer_parameters = jax.tree_map(lambda param, grad: param - self.learning_rate * grad,
                                                      self.layer_parameters, grad_layer_parameters)
                 
                 self.input_layer.parameters = self.layer_parameters[0]

@@ -17,8 +17,8 @@ class GymGame:
     
     def __init__(self, config):
         self.state_history = []
-        self.w = config["w"]
-        self.q = config["q"]
+        self.roll_ahead = config["w"]
+        self.look_back = config["q"]
         self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
     
     
@@ -147,24 +147,29 @@ class System:
     
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
-        self.w = self.game.w
-        self.q = self.game.q
+        roll_ahead = self.game.roll_ahead
+        look_back = self.game.look_back
 
         for _ in range(self.mini_batch_size):
             random_epidata = random.choice(self.epidata_array)
-            k = random.randint(self.q, len(random_epidata) - self.w - 1)
-            
-            states = [random_epidata[i][0] for i in range(k - self.q, k + 1)]
-            actions = [random_epidata[i][3] for i in range(k + 1, k + self.w + 1)]
-            policies = [random_epidata[i][2] for i in range(k, k + self.w + 1)]
-            values = [random_epidata[i][1] for i in range(k, k + self.w + 1)]
-            rewards = [random_epidata[i][4] for i in range(k + 1, k + self.w + 1)]
+            max_index = len(random_epidata) - roll_ahead - 1
+            if max_index <= look_back:
+                continue
+
+            k = random.randint(look_back, max_index) 
+
+            states = [random_epidata[i][0] for i in range(k - look_back, k + 1)]
+            actions = [random_epidata[i][3] for i in range(k + 1, k + roll_ahead + 1)]
+            policies = [random_epidata[i][2] for i in range(k, k + roll_ahead + 1)]
+            values = [random_epidata[i][1] for i in range(k, k + roll_ahead + 1)]
+            rewards = [random_epidata[i][4] for i in range(k + 1, k + roll_ahead + 1)]
 
             PVR = [policies, values, rewards]
-            
+
             self.representation.BPTT(states, actions, PVR)
             self.prediction.BPTT(states, actions, PVR)
             self.dynamics.BPTT(states, actions, PVR)
+
 
 
 if __name__ == '__main__':
