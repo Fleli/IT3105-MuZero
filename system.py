@@ -17,8 +17,8 @@ class GymGame:
     
     def __init__(self, config):
         self.state_history = []
-        self.w = config.get("w", 5)
-        self.q = config.get("q", 5)
+        self.w = config["w"]
+        self.q = config["q"]
         self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
     
     
@@ -81,19 +81,19 @@ class GymGame:
 class System:
     
     def __init__(self):
-        self.Ne = CONFIG["num_episodes"]
-        self.Nes = CONFIG["num_episode_steps"]
+        self.num_episodes = CONFIG["num_episodes"]
+        self.num_episode_steps = CONFIG["num_episode_steps"]
         self.num_searches = CONFIG["num_searches"]
         self.dmax = CONFIG["max_depth"]
-        self.It = CONFIG["training_interval"]
-        self.mbs = CONFIG["minibatch_size"]
+        self.training_int = CONFIG["training_interval"]
+        self.mini_batch_size = CONFIG["minibatch_size"]
         self.game_type = CONFIG["game"]
         self.dynamics = NeuralNetwork(CONFIG["dynamics_nn"])
         self.prediction = NeuralNetwork(CONFIG["prediction_nn"])
         self.representation = NeuralNetwork(CONFIG["representation_nn"])
         self.game = self.initialize_game()
         self.mcts = MCTS(self.game, self.dynamics, self.prediction, self.representation)
-        self.EH = []
+        self.epidata_array = []
     
     
     def initialize_game(self):
@@ -107,11 +107,11 @@ class System:
     
     def train(self):
         """Main training loop over episodes."""
-        for episode in range(self.Ne):
+        for episode in range(self.num_episodes):
             epidata = self.episode()
-            self.EH.append(epidata)
+            self.epidata_array.append(epidata)
             
-            if episode % self.It == 0:
+            if episode % self.training_int == 0:
                 # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
     
@@ -121,9 +121,9 @@ class System:
         state = self.game.reset()
         epidata = []
         
-        print(f"episode. Note self.Nes={self.Nes}")
+        print(f"episode. Note self.Nes={self.num_episode_steps}")
         
-        for k in range(self.Nes):
+        for k in range(self.num_episode_steps):
             step_data = self.step(state, k)
             epidata.append(step_data)
             state = step_data[0]
@@ -148,19 +148,21 @@ class System:
         self.w = self.game.w
         self.q = self.game.q
 
-        for _ in range(self.mbs):
-            Eb = random.choice(self.EH)
-            k = random.randint(self.q, len(Eb) - self.w - 1)
+        for _ in range(self.mini_batch_size):
+            random_epidata = random.choice(self.epidata_array)
+            k = random.randint(self.q, len(random_epidata) - self.w - 1)
             
-            states = [Eb[i][0] for i in range(k - self.q, k + 1)]
-            actions = [Eb[i][3] for i in range(k + 1, k + self.w + 1)]
-            policies = [Eb[i][2] for i in range(k, k + self.w + 1)]
-            values = [Eb[i][1] for i in range(k, k + self.w + 1)]
-            rewards = [Eb[i][4] for i in range(k + 1, k + self.w + 1)]
+            states = [random_epidata[i][0] for i in range(k - self.q, k + 1)]
+            actions = [random_epidata[i][3] for i in range(k + 1, k + self.w + 1)]
+            policies = [random_epidata[i][2] for i in range(k, k + self.w + 1)]
+            values = [random_epidata[i][1] for i in range(k, k + self.w + 1)]
+            rewards = [random_epidata[i][4] for i in range(k + 1, k + self.w + 1)]
+
+            PVR = [policies, values, rewards]
             
-            self.representation.BPTT(states, actions, policies, values, rewards)
-            self.prediction.BPTT(states, actions, policies, values, rewards)
-            self.dynamics.BPTT(states, actions, policies, values, rewards)
+            self.representation.BPTT(states, actions, PVR)
+            self.prediction.BPTT(states, actions, PVR)
+            self.dynamics.BPTT(states, actions, PVR)
 
 
 if __name__ == '__main__':
