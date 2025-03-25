@@ -2,12 +2,15 @@ import random
 from Config import CONFIG
 from MCTS import MCTS
 from NeuralNetwork import NeuralNetwork
+from NeuralNetworkManager import *
 
 import random
 import gym
 import jax
 import jax.numpy as jnp
 from Config import CONFIG
+
+# TODO: Må MCTS.game resettes mellom hver epoch?
 
 import numpy as np
 if not hasattr(np, 'bool8'):
@@ -88,11 +91,9 @@ class System:
         self.training_int = CONFIG["training_interval"]
         self.mini_batch_size = CONFIG["minibatch_size"]
         self.game_type = CONFIG["game"]
-        self.dynamics = NeuralNetwork(CONFIG["dynamics_nn"])
-        self.prediction = NeuralNetwork(CONFIG["prediction_nn"])
-        self.representation = NeuralNetwork(CONFIG["representation_nn"])
+        self.nnm = NeuralNetworkManager(CONFIG)
         self.game = self.initialize_game()
-        self.mcts = MCTS(self.game, self.dynamics, self.prediction, self.representation)
+        self.mcts = MCTS(self.game, self.nnm.dynamics, self.nnm.prediction, self.nnm.representation)
         self.epidata_array = []
     
     
@@ -163,12 +164,8 @@ class System:
             policies = [random_epidata[i][2] for i in range(k, k + roll_ahead + 1)]
             values = [random_epidata[i][1] for i in range(k, k + roll_ahead + 1)]
             rewards = [random_epidata[i][4] for i in range(k + 1, k + roll_ahead + 1)]
-
-            PVR = [policies, values, rewards]
-
-            self.representation.BPTT(states, actions, PVR)
-            self.prediction.BPTT(states, actions, PVR)
-            self.dynamics.BPTT(states, actions, PVR)
+            
+            self.nnm.bptt(states, actions, policies, values, rewards)
 
 
 

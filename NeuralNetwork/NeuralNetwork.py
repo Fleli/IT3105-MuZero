@@ -81,7 +81,7 @@ class NeuralNetwork:
         output = self.output_layer.compute_output(current_input, None, params[-1])
         return output, hidden_states
 
-    def backward(self, stored_state, stored_input, target):
+    def backward(self, stored_state, stored_input, target):         # Denne blir aldri called. Skal vel bruke variant i BPTT.
         def loss_fn(layer_params):
             output, _ = self.forward(stored_input, stored_state, layer_params)
             return self.loss_function(output, target)
@@ -89,47 +89,6 @@ class NeuralNetwork:
         grad_layer_parameters = jax.grad(loss_fn)(self.layer_parameters)
         return grad_layer_parameters
 
-    def BPTT(self, inputs, targets, initial_state):
-        T = len(inputs) 
-
-        state = initial_state
-        stored_states = [state]
-        stored_inputs = []   
-        stored_targets = [] 
-
-        for t in range(T):
-            output, state = self.forward(inputs[t], state)
-            loss = self.loss_function(output, targets[t])
-
-            stored_states.append(state)
-            stored_inputs.append(inputs[t])
-            stored_targets.append(targets[t])
-
-            if ((t + 1) % self.k == 0) or (t == T - 1):
-                block_length = len(stored_inputs)
-                block_offset = t - block_length + 1
-
-                grad_layer_parameters = jax.tree_map(jnp.zeros_like, self.layer_parameters)
-
-                
-                for j in range(block_length):
-                    target_idx = block_offset + j
-                    grad_param_j = self.backward(stored_states[j], stored_inputs[j], targets[target_idx])
-                    grad_layer_parameters = jax.tree_map(lambda g1, g2: g1 + g2,
-                                                         grad_layer_parameters, grad_param_j)
-                
-                self.layer_parameters = jax.tree_map(lambda param, grad: param - self.learning_rate * grad,
-                                                     self.layer_parameters, grad_layer_parameters)
-                
-                self.input_layer.parameters = self.layer_parameters[0]
-                for i, layer in enumerate(self.hidden_layers):
-                    layer.parameters = self.layer_parameters[i + 1]
-                self.output_layer.parameters = self.layer_parameters[-1]
-
-                stored_states = [state]
-                stored_inputs = []
-                stored_targets = []
-        
     def predict(self, input):
         output, state = self.forward(input, self.hidden_states)
         self.hidden_states = state
