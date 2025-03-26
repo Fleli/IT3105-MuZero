@@ -63,7 +63,7 @@ class GymGame:
         
         states = []
         
-        for state_index in range(k - self.q, k):
+        for state_index in range(k - self.look_back, k):
             if state_index <= 0:
                 states.append(jnp.zeros_like(state))
             else:
