@@ -7,11 +7,10 @@ class NeuralNetworkLayer:
     n_neurons: int
     previous_layer: any
 
-    def __init__(self, n_neurons, activation_function, params, include_bias: bool):
+    def __init__(self, n_neurons, activation_function, params):
         self.parameters = params
         self.n_neurons = n_neurons
-        self.include_bias = include_bias
-        
+
         if isinstance(activation_function, str):
             if activation_function == "sigmoid":
                 self.activation_function = lambda x: 1 / (1 + jnp.exp(-x))
@@ -26,12 +25,11 @@ class NeuralNetworkLayer:
         else:
             self.activation_function = activation_function
 
-    def compute_output(self, input: jnp.ndarray, hidden_state: jnp.ndarray = None, params = None) -> jnp.ndarray:
+    def compute_output(self, input: jnp.ndarray, params = None) -> jnp.ndarray:
+
         if params is None:
             params = self.parameters
         z = jnp.dot(params["weights"], input) 
-        if hidden_state is not None and params.get("hidden_weights", None) is not None:
-            z = z + jnp.dot(params["hidden_weights"], hidden_state)
-        if self.include_bias and params.get("bias", None) is not None:
+        if params.get("bias", None) is not None:
             z = z + params["bias"]
         return self.activation_function(z)
