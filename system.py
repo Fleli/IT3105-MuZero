@@ -48,8 +48,7 @@ class GymGame:
             next_state, reward, terminated, info = result
         
         self.terminated = terminated or (len(result) == 5 and truncated)
-        
-        print(self.terminated)
+
         
         if isinstance(next_state, tuple):
             next_state = next_state[0]
@@ -63,7 +62,7 @@ class GymGame:
         
         states = []
         
-        for state_index in range(k - self.q, k):
+        for state_index in range(k - self.look_back, k):
             if state_index <= 0:
                 states.append(jnp.zeros_like(state))
             else:
@@ -124,13 +123,14 @@ class System:
         state = self.game.reset()
         epidata = []
         
-        print(f"episode. Note self.Nes={self.num_episode_steps}")
-        
+        #print(f"episode. Note self.Nes={self.num_episode_steps}")
         for k in range(self.num_episode_steps):
             step_data = self.step(state, k)
             epidata.append(step_data)
             state = step_data[0]
-
+            if self.game.terminated:
+                break
+        print("Value current episode:", len(epidata))  
         return epidata
     
     
@@ -164,7 +164,6 @@ class System:
             policies = [random_epidata[i][2] for i in range(k, k + roll_ahead + 1)]
             values = [random_epidata[i][1] for i in range(k, k + roll_ahead + 1)]
             rewards = [random_epidata[i][4] for i in range(k + 1, k + roll_ahead + 1)]
-            
             self.nnm.bptt(states, actions, policies, values, rewards)
 
 

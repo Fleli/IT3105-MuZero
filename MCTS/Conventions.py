@@ -22,4 +22,10 @@ def dynamics_network_output(nn_output: jax.Array) -> tuple[float, jax.Array]:
 
 # Prediction Network Output -> Evaluation, [Action Probabilities]
 def prediction_network_output(nn_output: jax.Array) -> tuple[float, jax.Array]:
-    return nn_output[0], nn_output[1:]
+    evaluation = nn_output[0]
+    logits = nn_output[1:]
+    max_logit = jnp.max(logits)
+    exp_logits = jnp.exp(logits - max_logit)
+    probabilities = exp_logits / (jnp.sum(exp_logits) + 1e-8)
+    return evaluation, probabilities
+

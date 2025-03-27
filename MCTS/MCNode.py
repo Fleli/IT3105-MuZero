@@ -5,6 +5,7 @@ from MCTS.MCTSTypes import *
 from NeuralNetwork.NeuralNetwork import *
 
 import math
+import jax.numpy as jnp
 from random import choice as uniform_choice, choices as weighted_choice
 
 type MCNode = MCNode
@@ -27,9 +28,12 @@ class MCNode():
     action_from_parent: Action = None
     
     
-    def __init__(self, state: AbstractState, parent: MCNode, action_from_parent: Action):
+    def __init__(self, state: AbstractState, reward=None, parent: MCNode=None, action_from_parent: Action=None):
+        if reward is None:
+            reward = jnp.array([1])
         
         self.state = state
+        self.reward = reward
         self.parent = parent
         self.action_from_parent = action_from_parent
         
@@ -43,14 +47,14 @@ class MCNode():
     def expand(self, game: AbstractGame, dynamics_network: NeuralNetwork):
         
         assert len(self.children) == 0, 'Unexpectedly regenerated children of node.'
-        
         action_space = game.action_space()
         
         for action in action_space:
             network_input = dynamics_network_input(self.state, action)
-            nn_output, _dynamics_hidden = dynamics_network.predict(network_input)
-            _, next_abstract_state = dynamics_network_output(nn_output)
-            child = MCNode(next_abstract_state, self, action)
+            nn_output = dynamics_network.forward(network_input)
+            reward, next_abstract_state = dynamics_network_output(nn_output)
+            reward = jnp.array([reward])
+            child = MCNode(next_abstract_state, reward, self, action)
             self.children[action] = child
     
     
