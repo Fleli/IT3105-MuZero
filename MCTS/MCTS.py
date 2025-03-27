@@ -10,7 +10,7 @@ from MCTS.MCNode import *
 
 class MCTS():
 
-    _rollout_depth = 2
+    _rollout_depth = 1
     _verbose = False
 
     # Actual, concrete game model (NOTE: Rename class to 'Game' since it's concrete)
@@ -91,7 +91,7 @@ class MCTS():
             jnp.concatenate([node.reward, node.state]))
         evaluation, _ = prediction_network_output(nn_output)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
-        discount_factor = 1
+        discount_factor = 0.95
         node.backpropagate(evaluation, discount_factor)
 
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)

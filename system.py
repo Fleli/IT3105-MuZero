@@ -157,8 +157,8 @@ class System:
                        for i in range(k + 1, k + roll_ahead + 1)]
             policies = [random_epidata[i][2]
                         for i in range(k, k + roll_ahead + 1)]
-            values = [len(random_epidata[i:])
-                      for i in range(k, k + roll_ahead + 1)]
+            values = [sum([CONFIG["discount_factor"] ** i for i in range(len(random_epidata) - i)]) for i in range(k, k + roll_ahead + 1)]
+
             rewards = [random_epidata[i][4]
                        for i in range(k + 1, k + roll_ahead + 1)]
             self.nnm.bptt(states, actions, policies, values, rewards)
