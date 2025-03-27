@@ -23,8 +23,8 @@ class NeuralNetwork:
             n_neurons=layers[0],
             activation_function=activation_function,
             params={
-                "weights": random.normal(key, (layers[0], input_dim)) * 0.01,
-                "bias": random.normal(key, (layers[0],)) * 0.01
+                "weights": random.normal(key, (layers[0], input_dim)) * 0.0001,
+                "bias": random.normal(key, (layers[0],)) * 0.0001
             }
         )
         self.hidden_layers = [
@@ -32,9 +32,9 @@ class NeuralNetwork:
                 n_neurons=n,
                 activation_function=activation_function,
                 params={
-                    "weights": random.normal(key, (n, in_dim)) * 0.01,
-                    "hidden_weights": random.normal(key, (n, n)) * 0.01,
-                    "bias": random.normal(key, (n,)) * 0.01 
+                    "weights": random.normal(key, (n, in_dim)) * 0.0001,
+                    "hidden_weights": random.normal(key, (n, n)) * 0.0001,
+                    "bias": random.normal(key, (n,)) * 0.0001 
                 }
             )
             for n, in_dim in zip(layers[1:], layers[:-1])
@@ -44,10 +44,10 @@ class NeuralNetwork:
             n_neurons=output_dim,
             activation_function="identity",
             params={
-                "weights": random.normal(key, (output_dim, layers[-1])) * 0.01,
+                "weights": random.normal(key, (output_dim, layers[-1])) * 0.0001,
                 # typically no recurrent connection in output.
                 "hidden_weights": jnp.zeros((output_dim,)),
-                "bias": random.normal(key, (output_dim,)) * 0.01 
+                "bias": random.normal(key, (output_dim,)) * 0.0001 
             }
         )
         self.layer_parameters = [self.input_layer.parameters] + \

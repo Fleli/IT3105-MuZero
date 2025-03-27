@@ -13,7 +13,7 @@ type MCNode = MCNode
 class MCNode():
     
     # Constant in u(s, a) evaluation
-    _c = 1
+    _c = 5
     
     state: AbstractState
     children: dict[Action, MCNode]
@@ -28,7 +28,7 @@ class MCNode():
     action_from_parent: Action = None
     
     
-    def __init__(self, state: AbstractState, reward=None, parent: MCNode=None, action_from_parent: Action=None):
+    def __init__(self, state: AbstractState, actions, reward=None, parent: MCNode=None, action_from_parent: Action=None):
         if reward is None:
             reward = jnp.array([1])
         
@@ -36,9 +36,12 @@ class MCNode():
         self.reward = reward
         self.parent = parent
         self.action_from_parent = action_from_parent
+        self.actions = actions
         
         self.children = {}
         self.visit_counts = {}
+        for action in actions:
+            self.visit_counts[action] = 0
         self.visits_to_self = 0
         self.sum_evaluation = 0
     
@@ -54,7 +57,7 @@ class MCNode():
             nn_output = dynamics_network.forward(network_input)
             reward, next_abstract_state = dynamics_network_output(nn_output)
             reward = jnp.array([reward])
-            child = MCNode(next_abstract_state, reward, self, action)
+            child = MCNode(next_abstract_state, self.actions, reward, self, action)
             self.children[action] = child
     
     
@@ -89,7 +92,11 @@ class MCNode():
     
     # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
-        return self.sum_evaluation / (self.visit_counts[action] if action in self.visit_counts else 1)
+        child = self.children.get(action)
+        if child and child.visits_to_self > 0:
+            return child.sum_evaluation / child.visits_to_self
+        return 0
+
     
     
     # Backpropagate the value up through the tree.

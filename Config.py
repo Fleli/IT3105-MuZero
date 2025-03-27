@@ -18,7 +18,7 @@ CONFIG = {
         "output_dim": 4 + 1,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.01
+        "learning_rate": 0.001
     },
 
     "prediction_nn": {
@@ -27,7 +27,7 @@ CONFIG = {
         "output_dim": 3,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.01
+        "learning_rate": 0.001
     },
 
 
@@ -37,6 +37,6 @@ CONFIG = {
         "output_dim": 4,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.01
+        "learning_rate": 0.001
     }
 }

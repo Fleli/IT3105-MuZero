@@ -10,7 +10,7 @@ from MCTS.MCNode import *
 
 class MCTS():
 
-    _rollout_depth = 1
+    _rollout_depth = 2
     _verbose = False
 
     # Actual, concrete game model (NOTE: Rename class to 'Game' since it's concrete)
@@ -34,7 +34,7 @@ class MCTS():
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
 
-    def search(self, N_rollouts: int, concrete_game_states: jax.Array) -> tuple[Action, dict, float]:
+    def search(self, N_rollouts: int, concrete_game_states: jax.Array, actions=[0,1]) -> tuple[Action, dict, float]:
 
         flattened_states = concrete_game_states.flatten()
         abstract_state = self.representation_network.forward(flattened_states)
@@ -42,7 +42,7 @@ class MCTS():
         self.log(f"Concrete game states ( \n{concrete_game_states} )\n")
         self.log(f"Flattened states:{flattened_states}")
         self.log(f"Abstract state returned:{abstract_state}")
-        root = MCNode(abstract_state, None, None, None)
+        root = MCNode(abstract_state, actions, None, None, None)
 
         for simulation in range(N_rollouts):
 
@@ -67,10 +67,10 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation/N_rollouts
 
-        self.log("MCTS Results:")
-        self.log(f" -> Action {results[0]}")
-        self.log(f" -> Visits {results[1]}")
-        self.log(f" -> Eval {results[2]}")
+        self.log("MCTS Results:", force=True)
+        self.log(f" -> Action {results[0]}", force=True)
+        self.log(f" -> Visits {results[1]}", force=True)
+        self.log(f" -> Eval {results[2]}", force=True)
 
         return results
 

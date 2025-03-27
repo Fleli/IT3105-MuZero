@@ -16,72 +16,66 @@ import numpy as np
 if not hasattr(np, 'bool8'):
     np.bool8 = np.bool_
 
+
 class GymGame:
-    
+
     def __init__(self, config):
         self.state_history = []
         self.roll_ahead = config["w"]
         self.look_back = config["q"]
         self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
-    
-    
+
     def reset(self):
-        
+
         self.state_history = []
         result = self.env.reset()
-        
+
         if isinstance(result, tuple):
             observation, _ = result
         else:
             observation = result
-        
+
         return observation
-    
-    
+
     def simulate(self, state, action):
-        
+
         result = self.env.step(action)
-        
+
         if len(result) == 5:
             next_state, reward, terminated, truncated, info = result
         else:
             next_state, reward, terminated, info = result
-        
+
         self.terminated = terminated or (len(result) == 5 and truncated)
 
-        
         if isinstance(next_state, tuple):
             next_state = next_state[0]
-        
+
         self.state_history.append(next_state)
-        
+
         return next_state, reward
-    
-    
+
     def gather_states(self, state, k):
-        
+
         states = []
-        
+
         for state_index in range(k - self.look_back, k):
             if state_index <= 0:
                 states.append(jnp.zeros_like(state))
             else:
                 states.append(self.state_history[state_index])
-        
+
         return jnp.array(states + [state])
-    
-    
+
     def action_space(self):
         return list(range(self.env.action_space.n))
-    
-    
+
     def render(self):
         self.env.render()
 
 
-
 class System:
-    
+
     def __init__(self):
         self.num_episodes = CONFIG["num_episodes"]
         self.num_episode_steps = CONFIG["num_episode_steps"]
@@ -92,10 +86,10 @@ class System:
         self.game_type = CONFIG["game"]
         self.nnm = NeuralNetworkManager(CONFIG)
         self.game = self.initialize_game()
-        self.mcts = MCTS(self.game, self.nnm.dynamics, self.nnm.prediction, self.nnm.representation)
+        self.mcts = MCTS(self.game, self.nnm.dynamics,
+                         self.nnm.prediction, self.nnm.representation)
         self.epidata_array = []
-    
-    
+
     def initialize_game(self):
         """Initialize the game environment."""
         # May only have one game
@@ -103,49 +97,47 @@ class System:
             game = GymGame(CONFIG["gym"])
 
         return game
-    
-    
+
     def train(self):
         """Main training loop over episodes."""
         for episode in range(self.num_episodes):
             epidata = self.episode()
             self.epidata_array.append(epidata)
-            
+
             if episode % self.training_int == 0:
                 # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
 
         return self.dynamics, self.prediction, self.representation
-    
-    
+
     def episode(self):
         """Run a single episode and return collected data."""
         state = self.game.reset()
         epidata = []
-        
-        #print(f"episode. Note self.Nes={self.num_episode_steps}")
+        reward = 1
+        # print(f"episode. Note self.Nes={self.num_episode_steps}")
         for k in range(self.num_episode_steps):
-            step_data = self.step(state, k)
+            step_data = self.step(state, k, reward)
+            state, reward, step_data[0], step_data[4] = step_data[0], step_data[4], state, reward
             epidata.append(step_data)
-            state = step_data[0]
+
             if self.game.terminated:
                 break
-        print("Value current episode:", len(epidata))  
+        print("Value current episode:", len(epidata))
         return epidata
-    
-    
-    def step(self, state, k):
+
+    def step(self, state, k, reward):
         """Perform one step in the episode, returning collected data."""
         phi_k = self.game.gather_states(state, k)
 
-        action_k, visit_dist, root_value = self.mcts.search(self.num_searches, phi_k)
+        action_k, visit_dist, root_value = self.mcts.search(
+            self.num_searches, phi_k)
         next_state, next_reward = self.game.simulate(state, action_k)
-        
+
         # TODO: Det sto [state, ...] her. Har endret til [next_state, ...] fordi vi skal vel ha den neste staten
         # til neste step? Dobbeltsjekk.
         return [next_state, root_value, visit_dist, action_k, next_reward]
-    
-    
+
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
         roll_ahead = self.game.roll_ahead
@@ -157,18 +149,22 @@ class System:
             if max_index <= look_back:
                 continue
 
-            k = random.randint(look_back, max_index) 
+            k = random.randint(look_back, max_index)
 
-            states = [random_epidata[i][0] for i in range(k - look_back, k + 1)]
-            actions = [random_epidata[i][3] for i in range(k + 1, k + roll_ahead + 1)]
-            policies = [random_epidata[i][2] for i in range(k, k + roll_ahead + 1)]
-            values = [random_epidata[i][1] for i in range(k, k + roll_ahead + 1)]
-            rewards = [random_epidata[i][4] for i in range(k + 1, k + roll_ahead + 1)]
+            states = [random_epidata[i][0]
+                      for i in range(k - look_back, k + 1)]
+            actions = [random_epidata[i][3]
+                       for i in range(k + 1, k + roll_ahead + 1)]
+            policies = [random_epidata[i][2]
+                        for i in range(k, k + roll_ahead + 1)]
+            values = [len(random_epidata[i:])
+                      for i in range(k, k + roll_ahead + 1)]
+            rewards = [random_epidata[i][4]
+                       for i in range(k + 1, k + roll_ahead + 1)]
             self.nnm.bptt(states, actions, policies, values, rewards)
 
 
-
 if __name__ == '__main__':
-    
+
     system = System()
     system.train()
