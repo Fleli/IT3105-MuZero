@@ -24,11 +24,12 @@ class MCTS():
 
     # Initialize with Game plus three NNs
 
-    def __init__(self, game: AbstractGame, dynamics: NeuralNetwork, prediction: NeuralNetwork, representation: NeuralNetwork):
+    def __init__(self, game: AbstractGame, dynamics: NeuralNetwork, prediction: NeuralNetwork, representation: NeuralNetwork, config):
         self.game = game
         self.dynamics_network = dynamics
         self.prediction_network = prediction
         self.representation_network = representation
+        self.config = config
 
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
@@ -42,7 +43,7 @@ class MCTS():
         self.log(f"Concrete game states ( \n{concrete_game_states} )\n")
         self.log(f"Flattened states:{flattened_states}")
         self.log(f"Abstract state returned:{abstract_state}")
-        root = MCNode(abstract_state, actions, None, None, None)
+        root = MCNode(abstract_state, actions, self.config['exploration'], None, None, None)
 
         for simulation in range(N_rollouts):
 
@@ -67,10 +68,10 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation/N_rollouts
 
-        self.log("MCTS Results:", force=True)
-        self.log(f" -> Action {results[0]}", force=True)
-        self.log(f" -> Visits {results[1]}", force=True)
-        self.log(f" -> Eval {results[2]}", force=True)
+        self.log("MCTS Results:")
+        self.log(f" -> Action {results[0]}")
+        self.log(f" -> Visits {results[1]}")
+        self.log(f" -> Eval {results[2]}")
 
         return results
 
@@ -91,7 +92,7 @@ class MCTS():
             jnp.concatenate([node.reward, node.state]))
         evaluation, _ = prediction_network_output(nn_output)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
-        discount_factor = 0.95
+        discount_factor = self.config['discount_factor']
         node.backpropagate(evaluation, discount_factor)
 
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)
