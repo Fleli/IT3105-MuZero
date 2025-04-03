@@ -1,20 +1,26 @@
 import random
 from Config import CONFIG
 from MCTS import MCTS
-from NeuralNetwork import NeuralNetwork
+
 from NeuralNetworkManager import *
 
 import random
 import gym
-import jax
 import jax.numpy as jnp
-from Config import CONFIG
-
 # TODO: Må MCTS.game resettes mellom hver epoch?
 
 import numpy as np
 if not hasattr(np, 'bool8'):
     np.bool8 = np.bool_
+
+
+def to_float(value):
+    if isinstance(value, jnp.ndarray):
+        try:
+            return float(value)
+        except Exception:
+            return float(value.tolist()[0])
+    return value
 
 
 class GymGame:
@@ -23,7 +29,7 @@ class GymGame:
         self.state_history = []
         self.roll_ahead = config["w"]
         self.look_back = config["q"]
-        self.env = gym.make(CONFIG['gym']["env_name"], render_mode="human")
+        self.env = gym.make(config["env_name"], render_mode="human")
 
     def reset(self):
 
@@ -76,39 +82,45 @@ class GymGame:
 
 class System:
 
-    def __init__(self):
-        self.num_episodes = CONFIG["num_episodes"]
-        self.num_episode_steps = CONFIG["num_episode_steps"]
-        self.num_searches = CONFIG["num_searches"]
-        self.dmax = CONFIG["max_depth"]
-        self.training_int = CONFIG["training_interval"]
-        self.mini_batch_size = CONFIG["minibatch_size"]
-        self.game_type = CONFIG["game"]
-        self.nnm = NeuralNetworkManager(CONFIG)
-        self.game = self.initialize_game()
+    def __init__(self, config):
+        self.num_episodes = config["num_episodes"]
+        self.num_episode_steps = config["num_episode_steps"]
+        self.num_searches = config["num_searches"]
+        self.dmax = config["max_depth"]
+        self.training_int = config["training_interval"]
+        self.mini_batch_size = config["minibatch_size"]
+        self.game_type = config["game"]
+        self.nnm = NeuralNetworkManager(config)
+        self.game = self.initialize_game(config['gym'])
+        self.discount_factor = config["discount_factor"]
         self.mcts = MCTS(self.game, self.nnm.dynamics,
-                         self.nnm.prediction, self.nnm.representation)
+                         self.nnm.prediction, self.nnm.representation, config)
         self.epidata_array = []
 
-    def initialize_game(self):
+    def initialize_game(self, gym_params):
         """Initialize the game environment."""
         # May only have one game
         if self.game_type == "gym":
-            game = GymGame(CONFIG["gym"])
+            game = GymGame(gym_params)
 
         return game
 
     def train(self):
         """Main training loop over episodes."""
+        score = 0
+        last_score = 0
         for episode in range(self.num_episodes):
             epidata = self.episode()
             self.epidata_array.append(epidata)
-
+            score += len(epidata)
             if episode % self.training_int == 0:
                 # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
+                print("="*60, score/self.training_int)
+                last_score = score
+                score = 0
 
-        return self.dynamics, self.prediction, self.representation
+        return last_score/self.training_int
 
     def episode(self):
         """Run a single episode and return collected data."""
@@ -143,6 +155,8 @@ class System:
         roll_ahead = self.game.roll_ahead
         look_back = self.game.look_back
 
+        sum_loss = {"Reward": 0, "Value": 0,
+                    "Policy": 0, "Latent": 0}
         for _ in range(self.mini_batch_size):
             random_epidata = random.choice(self.epidata_array)
             max_index = len(random_epidata) - roll_ahead - 1
@@ -157,14 +171,25 @@ class System:
                        for i in range(k + 1, k + roll_ahead + 1)]
             policies = [random_epidata[i][2]
                         for i in range(k, k + roll_ahead + 1)]
-            values = [sum([CONFIG["discount_factor"] ** i for i in range(len(random_epidata) - i)]) for i in range(k, k + roll_ahead + 1)]
+            values = [sum([self.discount_factor ** i for i in range(len(random_epidata) - i)])
+                      for i in range(k, k + roll_ahead + 1)]
 
             rewards = [random_epidata[i][4]
                        for i in range(k + 1, k + roll_ahead + 1)]
-            self.nnm.bptt(states, actions, policies, values, rewards)
+            loss = self.nnm.bptt(states, actions, policies, values, rewards)
+            for loss_key, loss_value in sum_loss.items():
+                sum_loss[loss_key] = loss_value + \
+                    to_float(loss[loss_key]/self.mini_batch_size)
+        print(sum_loss)
+        for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
+            network.learning_rate *= 0.99
 
 
-if __name__ == '__main__':
 
-    system = System()
-    system.train()
+
+
+if __name__ == "__main__":
+    system = System(CONFIG)
+    score = system.train()
+
+
