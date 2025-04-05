@@ -30,6 +30,8 @@ class MCTS():
         self.prediction_network = prediction
         self.representation_network = representation
         self.config = config
+        self._rollout_depth = config['max_depth']
+        self._verbose = config['verbose']
 
     # Do a Monte Carlo Tree Search
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
@@ -68,10 +70,10 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation/N_rollouts
 
-        self.log("MCTS Results:")
-        self.log(f" -> Action {results[0]}")
-        self.log(f" -> Visits {results[1]}")
-        self.log(f" -> Eval {results[2]}")
+        self.log("MCTS Results:", force=True)
+        self.log(f" -> Action {results[0]}", force=True)
+        self.log(f" -> Visits {results[1]}", force=True)
+        self.log(f" -> Eval {results[2]}", force=True)
 
         return results
 
@@ -126,5 +128,4 @@ class MCTS():
     # Print a string if the verbose setting is True.
 
     def log(self, content: str, force=False):
-        if self._verbose or force:
-            print(content)
+        self.logger.log(content, force or self._verbose)

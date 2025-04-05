@@ -4,6 +4,8 @@ from MCTS import MCTS
 
 from NeuralNetworkManager import *
 
+from utils import Logger
+
 import random
 import gym
 import jax.numpy as jnp
@@ -107,6 +109,8 @@ class System:
 
     def train(self):
         """Main training loop over episodes."""
+        logger = Logger()
+        self.mcts.logger = logger
         score = 0
         last_score = 0
         for episode in range(self.num_episodes):
@@ -117,6 +121,7 @@ class System:
                 # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
                 print("="*60, score/self.training_int)
+                self.mcts.log("="*60+f" {score/self.training_int}")
                 last_score = score
                 score = 0
 
@@ -135,6 +140,7 @@ class System:
 
             if self.game.terminated:
                 break
+        self.mcts.log(f"Value current episode: {len(epidata)}", force=True)
         print("Value current episode:", len(epidata))
         return epidata
 
@@ -181,6 +187,7 @@ class System:
                 sum_loss[loss_key] = loss_value + \
                     to_float(loss[loss_key]/self.mini_batch_size)
         print(sum_loss)
+        self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
             network.learning_rate *= 0.99
 
