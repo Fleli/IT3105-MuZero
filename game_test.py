@@ -94,7 +94,7 @@ while running:
             targets_arr = jnp.array(targets_sequence)
             nn.BPTT(inputs_arr, targets_arr, initial_state, learning_rate, k)
             # Compute loss on the last sample for visualization.
-            output, _ = nn.forward(inputs_arr[-1], initial_state)
+            output, _ = nn(inputs_arr[-1], initial_state)
             loss = nn.loss_function(output, targets_arr[-1])
             loss_history.append(float(loss))
             if len(loss_history) > 100:

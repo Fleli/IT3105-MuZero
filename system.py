@@ -108,6 +108,9 @@ class System:
         return game
 
     def train(self):
+        
+        print(self.game.action_space())
+        
         """Main training loop over episodes."""
         logger = Logger()
         self.mcts.logger = logger
@@ -154,7 +157,7 @@ class System:
 
         # TODO: Det sto [state, ...] her. Har endret til [next_state, ...] fordi vi skal vel ha den neste staten
         # til neste step? Dobbeltsjekk.
-        return [next_state, root_value, visit_dist, action_k, next_reward]
+        return [state, root_value, visit_dist, action_k, next_reward]
 
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""

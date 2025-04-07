@@ -4,26 +4,31 @@ from MCTS.MCTSTypes import *
 import jax
 import jax.numpy as jnp
 
-# State, Action -> Dynamics Network Input
-def dynamics_network_input(state: AbstractState, action: Action, verbose=False) -> jax.Array:
-    
-    if verbose:
-        print(f"\n{dynamics_network_input.__name__}\nstate={state}\naction={action}")
-        print(type(state), state[0])
-        print(state[1])
-    
-    inp = jnp.insert(state, 0, action)
-    
-    return inp
+from NeuralNetwork import *
 
-# Dynamics Network Output -> Reward, Abstract State
-def dynamics_network_output(nn_output: jax.Array) -> tuple[float, jax.Array]:
-    return nn_output[0], nn_output[1:]
+def dynamics(state: AbstractState, action: Action, network: NeuralNetwork, params=None) -> tuple[float, AbstractState]:
+    """
+    Run dynamics network: (state, action) -> (reward, next_state)
+    """
+    inp = state.copy()
+    network_input = jnp.insert(inp, 0, action)
+    raw_output = network.forward(network_input, params)
+    return raw_output[0], raw_output[1:]
 
 # Prediction Network Output -> Evaluation, [Action Probabilities]
 def prediction_network_output(nn_output: jax.Array) -> tuple[float, jax.Array]:
     evaluation = nn_output[0]
     logits = nn_output[1:]
     probabilities = jax.nn.softmax(logits)
+    return evaluation, probabilities
+
+
+def prediction(state: AbstractState, network: NeuralNetwork) -> tuple[float, jax.Array]:
+    raw_output = network.forward(state)
+    print("prediction raw output:", raw_output)
+    evaluation = raw_output[0]
+    logits = raw_output[1:]
+    probabilities = jnp.
+    print("probs=", probabilities)
     return evaluation, probabilities
 

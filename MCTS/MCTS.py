@@ -7,6 +7,8 @@ from NeuralNetwork.NeuralNetwork import *
 
 from MCTS.MCNode import *
 
+from .Conventions import *
+
 
 class MCTS():
 
@@ -53,12 +55,15 @@ class MCTS():
                 f" -> Simulation {simulation + 1} / {N_rollouts}")
 
             current_node = root
+            
+            print("\n@root")
 
             while not current_node.is_leaf_node():
                 if self._verbose:
                     print(
                         f"[in while] current={current_node.__hash__()}, children={[f"{child.__hash__()}" for action, child in current_node.children.items()]}")
                 action = self._tree_policy(current_node)
+                print(f"(tree policy) action={action}")
                 current_node = current_node.children[action]
 
             self._rollout(current_node, self._rollout_depth)
@@ -66,9 +71,12 @@ class MCTS():
         # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
         # mot denne siden.
+        
+        sum_visits = sum(root.visit_counts.values())
+        visit_distr = { action: root.visit_counts[action] / sum_visits for action in self.game.action_space() }
 
         # Get random child, probability weighted to favor those branches that are explored the most.
-        results = root.biased_get_random_action(), root.visit_counts, root.sum_evaluation/N_rollouts
+        results = root.biased_get_random_action(), visit_distr, root.sum_evaluation/N_rollouts
 
         self.log("MCTS Results:", force=True)
         self.log(f" -> Action {results[0]}", force=True)
@@ -80,19 +88,20 @@ class MCTS():
     # Do a rollout to a certain depth, and backpropagate the result afterwards.
 
     def _rollout(self, leaf: MCNode, rollout_depth: int):
+        
+        print("(rolling out)")
 
         node = leaf
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
             node.expand(self.game, self.dynamics_network)
-            action = self._default_policy(
-                node)
+            action = self._default_policy(node)
+            print(f"action={action}")
             node = node.children[action]
 
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
-        nn_output = self.prediction_network.forward(
-            jnp.concatenate([node.reward, node.state]))
-        evaluation, _ = prediction_network_output(nn_output)
+        evaluation, _ = prediction(node.state, self.prediction_network)
+        print(evaluation)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         discount_factor = self.config['discount_factor']
         node.backpropagate(evaluation, discount_factor)
@@ -100,13 +109,17 @@ class MCTS():
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)
 
     def _tree_policy(self, node: MCNode) -> Action:
+        
+        print("[tree policy]")
+        
         action_space = self.game.action_space()
         best_action = None
         # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
-        best_evaluation = 0.0
+        best_evaluation = -100
         for action in action_space:
+            print(f"\n[action={action}]")
             evaluation = node.Q(action) + node.u(action)
-
+            print(f"->eval={evaluation}")
             self.log(f"\t\t -> evaluation={evaluation}")
             self.log(f"\n\t\t -> action={action}")
 
@@ -120,9 +133,7 @@ class MCTS():
     def _default_policy(self, node: MCNode) -> Action:
         # List of actions? Need to agree on interface here.
         action_space = self.game.action_space()
-        prediction = self.prediction_network.forward(
-            jnp.concatenate([node.reward, node.state]))
-        _, probabilities = prediction_network_output(prediction)
+        _, probabilities = prediction(node.state, self.prediction_network)
         return weighted_choice(action_space, probabilities)[0]
 
     # Print a string if the verbose setting is True.

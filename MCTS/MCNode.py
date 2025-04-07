@@ -26,7 +26,7 @@ class MCNode():
     visit_counts: dict[Action, int]
     sum_evaluation: float
 
-    action_from_parent: Action = None
+    action_from_parent: Action
 
     def __init__(self, state: AbstractState, actions, exploration, reward=None, parent: MCNode = None, action_from_parent: Action = None):
         if reward is None:
@@ -46,20 +46,16 @@ class MCNode():
         self.sum_evaluation = 0
 
     # Generate the children of this node.
-
     def expand(self, game: AbstractGame, dynamics_network: NeuralNetwork):
 
-        assert len(
-            self.children) == 0, 'Unexpectedly regenerated children of node.'
+        assert len(self.children) == 0, 'Unexpectedly regenerated children of node.'
+        
         action_space = game.action_space()
 
         for action in action_space:
-            network_input = dynamics_network_input(self.state, action)
-            nn_output = dynamics_network.forward(network_input)
-            reward, next_abstract_state = dynamics_network_output(nn_output)
+            reward, next_abstract_state = dynamics(self.state, action, dynamics_network)
             reward = jnp.array([reward])
-            child = MCNode(next_abstract_state, self.actions,
-                           self._c, reward, self, action)
+            child = MCNode(next_abstract_state, self.actions, self._c, reward, self, action)
             self.children[action] = child
 
     # Randomly choose a child and return it. Uniform distribution.
@@ -79,7 +75,8 @@ class MCNode():
         # TODO: This is probably quite slow. Find better way to accomplish the same thing.
         actions = list(self.children.keys())
         weights = [self.children[action].visits_to_self for action in actions]
-        return weighted_choice(actions, weights=weights)[0]
+        chosen_action = weighted_choice(actions, weights=weights)[0]
+        return chosen_action
 
     # A node is considered a leaf if it has no children.
 
@@ -89,8 +86,11 @@ class MCNode():
     # u(a) is the exploration bonus of action a
 
     def u(self, action: Action) -> float:
-        N_sa = self.visit_counts[action] if action in self.visit_counts else 0
-        return self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
+        print(f"[u] visit_counts={self.visit_counts} visits_to_self={self.visits_to_self}")
+        N_sa = self.visit_counts[action]
+        _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
+        print(f"u={_u}")
+        return _u
 
     # Q(a) is the value of doing action a
 
@@ -98,7 +98,7 @@ class MCNode():
         child = self.children.get(action)
         if child and child.visits_to_self > 0:
             return child.sum_evaluation / child.visits_to_self
-        return 0
+        return 0.1
 
     # Backpropagate the value up through the tree.
     # Discount by multiplying by the discount factor (e.g. 0.95) at each step.
