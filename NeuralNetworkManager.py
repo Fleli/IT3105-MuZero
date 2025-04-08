@@ -84,8 +84,14 @@ class NeuralNetworkManager():
                 total_policy_loss += policy_loss
                 total_latent_loss += latent_loss
                 total_reward_loss += reward_loss
-
+            sum_params = 0.0
+            for param in [prediction_params, dynamics_params, representation_params]:
+                flattened_params, _ = jax.tree_util.tree_flatten(param)
+                for p in flattened_params:
+                    sum_params += jnp.sum(jnp.square(p))
+            
             total_loss = total_reward_loss + total_value_loss + total_policy_loss + total_latent_loss
+            total_loss += 0.0001 * sum_params
             if split_loss:
                 return {"Reward":total_reward_loss/(T+1), "Value": total_value_loss/(T+1), 
                         "Policy": total_policy_loss/(T+1), "Latent": total_latent_loss/(T+1)}

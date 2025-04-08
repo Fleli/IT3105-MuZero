@@ -1,7 +1,7 @@
 CONFIG = {
     "num_episodes": 16*500,
     "num_episode_steps": 500,
-    "num_searches": 20,
+    "num_searches": 10,
     "max_depth": 1,
     "verbose": False,
     "training_interval": 16,
@@ -20,7 +20,7 @@ CONFIG = {
         "output_dim": 4 + 1,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.0001
+        "learning_rate": 0.00001
     },
 
     "prediction_nn": {
@@ -29,7 +29,7 @@ CONFIG = {
         "output_dim": 3,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.0001
+        "learning_rate": 0.00001
     },
 
 
@@ -39,6 +39,6 @@ CONFIG = {
         "output_dim": 4,
         "activation_function": "relu",
         "k": 1,
-        "learning_rate": 0.0001
+        "learning_rate": 0.00001
     }
 }
