@@ -64,8 +64,6 @@ class NeuralNetwork:
         self.layer_parameters = [self.input_layer.parameters] + \
                                 [layer.parameters for layer in self.hidden_layers] + \
                                 [self.output_layer.parameters]
-        
-        print(self.layer_parameters)
 
     def loss_function(self, activation, targets):
         return 0.5 * jnp.sum((activation - targets) ** 2)

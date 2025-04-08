@@ -55,15 +55,11 @@ class MCTS():
                 f" -> Simulation {simulation + 1} / {N_rollouts}")
 
             current_node = root
-            
-            print("\n@root")
-
             while not current_node.is_leaf_node():
                 if self._verbose:
                     print(
                         f"[in while] current={current_node.__hash__()}, children={[f"{child.__hash__()}" for action, child in current_node.children.items()]}")
                 action = self._tree_policy(current_node)
-                print(f"(tree policy) action={action}")
                 current_node = current_node.children[action]
 
             self._rollout(current_node, self._rollout_depth)
@@ -89,19 +85,15 @@ class MCTS():
 
     def _rollout(self, leaf: MCNode, rollout_depth: int):
         
-        print("(rolling out)")
-
         node = leaf
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
             node.expand(self.game, self.dynamics_network)
             action = self._default_policy(node)
-            print(f"action={action}")
             node = node.children[action]
 
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
         evaluation, _ = prediction(node.state, self.prediction_network)
-        print(evaluation)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         discount_factor = self.config['discount_factor']
         node.backpropagate(evaluation, discount_factor)
@@ -110,16 +102,12 @@ class MCTS():
 
     def _tree_policy(self, node: MCNode) -> Action:
         
-        print("[tree policy]")
-        
         action_space = self.game.action_space()
         best_action = None
         # NOTE: Make sure evaluations are in [0 , 1], which is assumed here.
         best_evaluation = -100
         for action in action_space:
-            print(f"\n[action={action}]")
             evaluation = node.Q(action) + node.u(action)
-            print(f"->eval={evaluation}")
             self.log(f"\t\t -> evaluation={evaluation}")
             self.log(f"\n\t\t -> action={action}")
 

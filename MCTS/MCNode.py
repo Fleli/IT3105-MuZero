@@ -86,10 +86,8 @@ class MCNode():
     # u(a) is the exploration bonus of action a
 
     def u(self, action: Action) -> float:
-        print(f"[u] visit_counts={self.visit_counts} visits_to_self={self.visits_to_self}")
         N_sa = self.visit_counts[action]
         _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
-        print(f"u={_u}")
         return _u
 
     # Q(a) is the value of doing action a
