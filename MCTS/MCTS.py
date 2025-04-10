@@ -1,4 +1,5 @@
 
+from random import choice
 from random import choices as weighted_choice
 
 from Game.Game import *
@@ -61,8 +62,11 @@ class MCTS():
                         f"[in while] current={current_node.__hash__()}, children={[f"{child.__hash__()}" for action, child in current_node.children.items()]}")
                 action = self._tree_policy(current_node)
                 current_node = current_node.children[action]
-
-            self._rollout(current_node, self._rollout_depth)
+                
+            current_node.expand(self.game, self.dynamics_network)
+            random_action = choice(list(current_node.children.keys()))
+            random_child = current_node.children[random_action]
+            self._rollout(random_child, self._rollout_depth)
 
         # Kan vi prune treet slik at den endelige action blir ny root? Så slipper man å regenerere den delen av treet
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
