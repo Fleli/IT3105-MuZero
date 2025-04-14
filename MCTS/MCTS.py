@@ -9,6 +9,7 @@ from MCTS.MCNode import *
 
 from .Conventions import *
 
+import numpy as np
 
 class MCTS():
 
@@ -47,13 +48,14 @@ class MCTS():
         self.log(f"Concrete game states ( \n{concrete_game_states} )\n")
         self.log(f"Flattened states:{flattened_states}")
         self.log(f"Abstract state returned:{abstract_state}")
-        root = MCNode(abstract_state, actions, self.config['exploration'], None, None, None)
-
+        
+        root = MCNode(abstract_state, actions, self.config['exploration'], 0, None, None)
+        
         for simulation in range(N_rollouts):
 
             self.log(
                 f" -> Simulation {simulation + 1} / {N_rollouts}")
-
+            
             current_node = root
             while not current_node.is_leaf_node():
                 if self._verbose:
@@ -68,8 +70,7 @@ class MCTS():
         # neste gang. Siden denne blir valgt er den mest explored, så treet er sannsynligvis relativt tungt
         # mot denne siden.
         
-        sum_visits = sum(root.visit_counts.values())
-        visit_distr = { action: root.visit_counts[action] / sum_visits for action in self.game.action_space() }
+        visit_distr = jax.nn.softmax( np.array ( [ root.visit_counts[action] for action in self.game.action_space() ] ) )
 
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = root.biased_get_random_action(), visit_distr, root.sum_evaluation/N_rollouts
@@ -96,7 +97,7 @@ class MCTS():
         evaluation, _ = prediction(node.state, self.prediction_network)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         discount_factor = self.config['discount_factor']
-        node.backpropagate(evaluation, discount_factor)
+        node.backpropagate(evaluation + node.accumulated_dynamics_rewards, discount_factor)
 
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)
 

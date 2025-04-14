@@ -1,7 +1,7 @@
 CONFIG = {
     "num_episodes": 16*500,
     "num_episode_steps": 500,
-    "num_searches": 20,
+    "num_searches": 8,
     "max_depth": 1,
     "verbose": False,
     "training_interval": 16,
