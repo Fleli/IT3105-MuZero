@@ -11,6 +11,8 @@ import gym
 import jax.numpy as jnp
 # TODO: Må MCTS.game resettes mellom hver epoch?
 
+import jax.random as jrandom
+
 import numpy as np
 if not hasattr(np, 'bool8'):
     np.bool8 = np.bool_
@@ -95,8 +97,11 @@ class System:
         self.nnm = NeuralNetworkManager(config)
         self.game = self.initialize_game(config['gym'])
         self.discount_factor = config["discount_factor"]
-        self.mcts = MCTS(self.game, self.nnm.dynamics,
-                         self.nnm.prediction, self.nnm.representation, config)
+        
+        key = jrandom.key(seed=42)
+        print(f"key={key}")
+        self.mcts = MCTS(self.game, self.nnm.dynamics, self.nnm.prediction, self.nnm.representation, config, key)
+        
         self.epidata_array = []
 
     def initialize_game(self, gym_params):
@@ -192,7 +197,7 @@ class System:
         print(sum_loss)
         self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
-            network.learning_rate *= 0.99
+            network.learning_rate *= 1
 
 
 

@@ -5,11 +5,21 @@ import jax.numpy as jnp
 from MCTS.Conventions import prediction, dynamics
 
 def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy):
+    
+    print(f"[prediction_loss] ARGS:")
+    print(f"\traw_value={raw_value}")
+    print(f"\traw_policy_logits={raw_policy_logits}")
+    print(f"\ttarget_value={target_value}")
+    print(f"\ttarget_policy={target_policy}")
+    
     value_loss = jnp.square(raw_value - target_value)
     
     target_policy = target_policy / jnp.sum(target_policy)
     log_probs = jax.nn.log_softmax(raw_policy_logits)
+    print(f"[prediction_loss] log_probs={log_probs}")
+    print(f"[prediction_loss] target_policy={target_policy}")
     policy_loss = -jnp.sum(target_policy * log_probs)
+    print(f"[prediction_loss] policy_loss={policy_loss}")
     return value_loss, policy_loss
 
 class NeuralNetworkManager():
@@ -107,7 +117,7 @@ class NeuralNetworkManager():
         )
 
         grads = jax.grad(composite_loss)(comp_params)
-
+        
         self.dynamics.layer_parameters = jax.tree_map(
             lambda p, g: p - self.dynamics.learning_rate * g,
             self.dynamics.layer_parameters, grads[0]
