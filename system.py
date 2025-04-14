@@ -180,13 +180,14 @@ class System:
                         for i in range(k, k + roll_ahead + 1)]
             values = [sum([self.discount_factor ** i for i in range(len(random_epidata) - i)])
                       for i in range(k, k + roll_ahead + 1)]
-
             rewards = [random_epidata[i][4]
                        for i in range(k + 1, k + roll_ahead + 1)]
+            
             loss = self.nnm.bptt(states, actions, policies, values, rewards)
             for loss_key, loss_value in sum_loss.items():
                 sum_loss[loss_key] = loss_value + \
                     to_float(loss[loss_key]/self.mini_batch_size)
+            
         print(sum_loss)
         self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:

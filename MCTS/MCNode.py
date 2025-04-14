@@ -5,14 +5,12 @@ from MCTS.MCTSTypes import *
 from NeuralNetwork.NeuralNetwork import *
 
 import math
-import jax.numpy as jnp
-from random import choice as uniform_choice, choices as weighted_choice
 
 type MCNode = MCNode
 
 
 class MCNode():
-
+    
     # Constant in u(s, a) evaluation
     _c: float
     
@@ -21,16 +19,16 @@ class MCNode():
     
     parent: MCNode
     action_taken: Action
-
+    
     visits_to_self: int
-    visit_counts: list[int]
-    sum_evaluation: float
     
     action_from_parent: Action
     
-    reward: float
-
-    def __init__(self, state: AbstractState, action_space, exploration, reward: float, parent: MCNode = None, action_from_parent: Action = None):
+    rewards: list[float]
+    visit_counts: list[int]
+    sum_evaluations: list[float]
+    
+    def __init__(self, state: AbstractState, action_space, exploration, parent: MCNode = None, action_from_parent: Action = None):
         
         self._c = exploration
         self.state = state
@@ -38,15 +36,19 @@ class MCNode():
         self.action_from_parent = action_from_parent
         self.action_space = action_space
         self.visits_to_self = 0
-        self.sum_evaluation = 0
-        self.reward = reward
         
         self.children = []
-        self.visit_counts = []
-        for _ in range(len(self.action_space)):
-            self.visit_counts.append(0)
         
-
+        self.rewards = []
+        self.visit_counts = []
+        self.sum_evaluations = []
+        
+        for _ in range(len(self.action_space)):
+            self.rewards.append(0)
+            self.visit_counts.append(0)
+            self.sum_evaluations.append(0)
+    
+    
     # Generate the children of this node.
     def expand(self, dynamics_network: NeuralNetwork):
 
@@ -54,48 +56,35 @@ class MCNode():
         
         for action in self.action_space:
             reward, next_abstract_state = dynamics(self.state, action, dynamics_network)
-            child = MCNode(next_abstract_state, self.action_space, self._c, reward, self, action)
+            child = MCNode(next_abstract_state, self.action_space, self._c, self, action)
+            self.rewards[action] = reward
             self.children.append(child)
-
-    # Randomly select a child and return it.
-    # Probabilities are proportional to the child's visit
-    # count, so more explored children are favored. Hence,
-    # is suitable to select actual action after MCTS.
-    def biased_get_random_action(self) -> Action:
-        # TODO: This is probably quite slow. Find better way to accomplish the same thing.
-        weights = [self.visit_counts[action] for action in self.action_space]
-        chosen_action = weighted_choice(self.action_space, weights=weights)[0]
-        return chosen_action
-
+    
+    
     # A node is considered a leaf if it has no children.
     def is_leaf_node(self) -> bool:
         return len(self.children) == 0
-
+    
+    
     # u(a) is the exploration bonus of action a
-    def u(self, action: Action) -> float:
+    def u(self, action: Action, pred_network) -> float:
+        
+        if False:
+            N_sa = self.visit_counts[action]
+            _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
+            return _u
+        
+        c = self._c
+        _, policy = prediction(self.state, pred_network)
+        p_sa = policy[action]
+        N_s = self.visits_to_self
         N_sa = self.visit_counts[action]
-        _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
-        return _u
-
+        
+        return c * p_sa * N_s / (1 + N_sa)
+    
+    
     # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
-        if action in self.visit_counts:
-            return self.sum_evaluation / self.visit_counts[action]
+        if self.visit_counts[action] > 0:
+            return self.sum_evaluations[action] / self.visit_counts[action]
         return 0.0
-
-    # Backpropagate the value up through the tree.
-    # Discount by multiplying by the discount factor (e.g. 0.95) at each step.
-    def backpropagate(self, value: float, discount_factor: float):
-        
-        self.sum_evaluation += value
-        self.visits_to_self += 1
-        
-        if self.action_from_parent is not None:
-            if self.action_from_parent not in self.parent.visit_counts:
-                self.parent.visit_counts[self.action_from_parent] = 0
-            self.parent.visit_counts[self.action_from_parent] += 1
-
-        if self.parent is None:
-            return
-
-        self.parent.backpropagate(value * discount_factor, discount_factor)
