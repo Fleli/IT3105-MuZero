@@ -22,11 +22,11 @@ class MCTS():
     # (Abstract state k, Action k) -> (Abstract state k+1, Reward k)
     dynamics_network: NeuralNetwork
     prediction_network: NeuralNetwork       # (Abstract state k) -> (Value k)
+    
     # (Concrete states k, k-1, ..., k-q) -> (Abstract state k)
     representation_network: NeuralNetwork
 
     # Initialize with Game plus three NNs
-
     def __init__(self, game: AbstractGame, dynamics: NeuralNetwork, prediction: NeuralNetwork, representation: NeuralNetwork, config):
         self.game = game
         self.dynamics_network = dynamics
@@ -97,7 +97,7 @@ class MCTS():
         evaluation, _ = prediction(node.state, self.prediction_network)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         discount_factor = self.config['discount_factor']
-        node.backpropagate(evaluation + node.accumulated_dynamics_rewards, discount_factor)
+        node.backpropagate(evaluation, discount_factor)
 
     # Choose the best move from a given state, evaluated by Q(s, a) + u(s, a)
 

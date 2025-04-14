@@ -25,15 +25,14 @@ class MCNode():
     visits_to_self: int
     visit_counts: dict[Action, int]
     sum_evaluation: float
-    
-    accumulated_dynamics_rewards: float
 
     action_from_parent: Action
+    
+    reward: float
 
-    def __init__(self, state: AbstractState, actions, exploration, reward=0.0, parent: MCNode = None, action_from_parent: Action = None):
+    def __init__(self, state: AbstractState, actions, exploration, reward: float, parent: MCNode = None, action_from_parent: Action = None):
         
         self._c = exploration
-        
         self.state = state
         self.parent = parent
         self.action_from_parent = action_from_parent
@@ -44,10 +43,7 @@ class MCNode():
             self.visit_counts[action] = 0
         self.visits_to_self = 0
         self.sum_evaluation = 0
-        
-        self.accumulated_dynamics_rewards = reward
-        if parent:
-            self.accumulated_dynamics_rewards += parent.accumulated_dynamics_rewards
+        self.reward = reward
         
 
     # Generate the children of this node.
@@ -92,18 +88,17 @@ class MCNode():
 
     # Q(a) is the value of doing action a
     def Q(self, action: Action) -> float:
-        child = self.children.get(action)
-        if child and child.visits_to_self > 0:
-            return child.sum_evaluation / child.visits_to_self
+        if action in self.visit_counts:
+            return self.sum_evaluation / self.visit_counts[action]
         return 0.0
 
     # Backpropagate the value up through the tree.
     # Discount by multiplying by the discount factor (e.g. 0.95) at each step.
     def backpropagate(self, value: float, discount_factor: float):
-
+        
         self.sum_evaluation += value
         self.visits_to_self += 1
-
+        
         if self.action_from_parent is not None:
             if self.action_from_parent not in self.parent.visit_counts:
                 self.parent.visit_counts[self.action_from_parent] = 0

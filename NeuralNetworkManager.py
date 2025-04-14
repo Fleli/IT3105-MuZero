@@ -8,6 +8,7 @@ def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy):
     value_loss = jnp.square(raw_value - target_value)
     
     target_policy = target_policy / jnp.sum(target_policy)
+    print(target_policy)
     log_probs = jax.nn.log_softmax(raw_policy_logits)
     policy_loss = -jnp.sum(target_policy * log_probs)
     return value_loss, policy_loss
