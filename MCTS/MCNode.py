@@ -15,55 +15,47 @@ class MCNode():
 
     # Constant in u(s, a) evaluation
     _c: float
-
+    
     state: AbstractState
-    children: dict[Action, MCNode]
-
+    children: list[MCNode]
+    
     parent: MCNode
     action_taken: Action
 
     visits_to_self: int
-    visit_counts: dict[Action, int]
+    visit_counts: list[int]
     sum_evaluation: float
-
+    
     action_from_parent: Action
     
     reward: float
 
-    def __init__(self, state: AbstractState, actions, exploration, reward: float, parent: MCNode = None, action_from_parent: Action = None):
+    def __init__(self, state: AbstractState, action_space, exploration, reward: float, parent: MCNode = None, action_from_parent: Action = None):
         
         self._c = exploration
         self.state = state
         self.parent = parent
         self.action_from_parent = action_from_parent
-        self.actions = actions
-        self.children = {}
-        self.visit_counts = {}
-        for action in actions:
-            self.visit_counts[action] = 0
+        self.action_space = action_space
         self.visits_to_self = 0
         self.sum_evaluation = 0
         self.reward = reward
         
+        self.children = []
+        self.visit_counts = []
+        for _ in range(len(self.action_space)):
+            self.visit_counts.append(0)
+        
 
     # Generate the children of this node.
-    def expand(self, game: AbstractGame, dynamics_network: NeuralNetwork):
+    def expand(self, dynamics_network: NeuralNetwork):
 
         assert len(self.children) == 0, 'Unexpectedly regenerated children of node.'
         
-        action_space = game.action_space()
-
-        for action in action_space:
+        for action in self.action_space:
             reward, next_abstract_state = dynamics(self.state, action, dynamics_network)
-            child = MCNode(next_abstract_state, self.actions, self._c, reward, self, action)
-            self.children[action] = child
-
-    # Randomly choose a child and return it. Uniform distribution.
-    # Save the action for later. It's used during backpropagation.
-    def uniform_get_random_child(self) -> MCNode:
-        action = uniform_choice(list(self.children.keys()))
-        child = self.children[action]
-        return child
+            child = MCNode(next_abstract_state, self.action_space, self._c, reward, self, action)
+            self.children.append(child)
 
     # Randomly select a child and return it.
     # Probabilities are proportional to the child's visit
@@ -71,9 +63,8 @@ class MCNode():
     # is suitable to select actual action after MCTS.
     def biased_get_random_action(self) -> Action:
         # TODO: This is probably quite slow. Find better way to accomplish the same thing.
-        actions = list(self.children.keys())
-        weights = [self.children[action].visits_to_self for action in actions]
-        chosen_action = weighted_choice(actions, weights=weights)[0]
+        weights = [self.visit_counts[action] for action in self.action_space]
+        chosen_action = weighted_choice(self.action_space, weights=weights)[0]
         return chosen_action
 
     # A node is considered a leaf if it has no children.

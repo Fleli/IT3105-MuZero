@@ -150,9 +150,7 @@ class System:
     def step(self, state, k, reward):
         """Perform one step in the episode, returning collected data."""
         phi_k = self.game.gather_states(state, k)
-
-        action_k, visit_dist, root_value = self.mcts.search(
-            self.num_searches, phi_k)
+        action_k, visit_dist, root_value = self.mcts.search(self.num_searches, phi_k)
         next_state, next_reward = self.game.simulate(state, action_k)
 
         # TODO: Det sto [state, ...] her. Har endret til [next_state, ...] fordi vi skal vel ha den neste staten

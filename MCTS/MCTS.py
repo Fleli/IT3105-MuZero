@@ -40,7 +40,7 @@ class MCTS():
     # - input: A list of the (q+1) last concrete game states s_(k-q), ..., s_(k)
     # - output: The concrete move that is (hopefully) optimal
 
-    def search(self, N_rollouts: int, concrete_game_states: jax.Array, actions=[0,1]) -> tuple[Action, dict, float]:
+    def search(self, N_rollouts: int, concrete_game_states: jax.Array, action_space=[0,1]) -> tuple[Action, dict, float]:
 
         flattened_states = concrete_game_states.flatten()
         abstract_state = self.representation_network.forward(flattened_states)
@@ -49,7 +49,7 @@ class MCTS():
         self.log(f"Flattened states:{flattened_states}")
         self.log(f"Abstract state returned:{abstract_state}")
         
-        root = MCNode(abstract_state, actions, self.config['exploration'], 0, None, None)
+        root = MCNode(abstract_state, action_space, self.config['exploration'], 0, None, None)
         
         for simulation in range(N_rollouts):
 
@@ -89,7 +89,7 @@ class MCTS():
         node = leaf
         for depth in range(rollout_depth):
             self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
-            node.expand(self.game, self.dynamics_network)
+            node.expand(self.dynamics_network)
             action = self._default_policy(node)
             node = node.children[action]
 
@@ -124,7 +124,8 @@ class MCTS():
         action_space = self.game.action_space()
         _, probabilities = prediction(node.state, self.prediction_network)
         return weighted_choice(action_space, probabilities)[0]
-
+        # TODO: Vurder å (deterministisk) velge beste move her, bare med liten sjanse for å velge tilfeldig (i stedet for alltid å vekte etter pred.)
+    
     # Print a string if the verbose setting is True.
 
     def log(self, content: str, force=False):
