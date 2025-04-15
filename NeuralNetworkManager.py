@@ -36,13 +36,16 @@ class NeuralNetworkManager():
         return jnp.array(concrete_state + [state]).flatten()
     
     def bptt(self, states, actions, policies, values, rewards):
+        
         T = len(actions) 
+        
         def composite_loss(comp_params, split_loss=False):
+            
             dynamics_params, prediction_params, representation_params = comp_params
             total_loss = 0.0
             concrete_state = self.gather_states([], states[0], 0)
             latent = self.representation.forward(concrete_state, representation_params)
-
+            
             pred_out = self.prediction.forward(latent, prediction_params)
             raw_value = pred_out[0]
             raw_policy_logits = pred_out[1:]
@@ -55,19 +58,22 @@ class NeuralNetworkManager():
             total_value_loss, total_policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy)
             total_latent_loss = 0
             total_reward_loss = 0
-
+            
+            # TODO: Se etter indekseringsfeil e.l. her.
+            
             for t in range(T):
+                
                 reward, pred_latent = dynamics(latent, actions[t], self.dynamics, params=dynamics_params)
                 reward_target = jnp.array([rewards[t]])
                 reward_loss = self.dynamics.loss_function(reward, reward_target)
                 latent_loss = 0.0
+                
                 if t + 1 < len(states):
                     concrete_state = self.gather_states(states, states[t+1], t+1)
-                    latent = self.representation.forward(concrete_state, representation_params)
+                    latent = self.representation.forward(concrete_state, params=representation_params)
                     latent_loss = self.dynamics.loss_function(pred_latent, latent)
-
-
-                pred_out = self.prediction.forward(latent, prediction_params)
+                
+                pred_out = self.prediction.forward(latent, params=prediction_params)
                 raw_value = pred_out[0]
                 raw_policy_logits = pred_out[1:]
                 
@@ -77,7 +83,7 @@ class NeuralNetworkManager():
                 target_value = jnp.array([values[t + 1]])
                 
                 value_loss, policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy)
-
+                
                 total_value_loss += value_loss
                 total_policy_loss += policy_loss
                 total_latent_loss += latent_loss
@@ -88,17 +94,18 @@ class NeuralNetworkManager():
                     flattened_params, _ = jax.tree_util.tree_flatten(param)
                     for p in flattened_params:
                         sum_params += jnp.sum(jnp.square(p))
+                
+            total_value_loss *= 0.05
 
             total_loss = total_reward_loss + total_value_loss + total_policy_loss + total_latent_loss
             total_loss += 0.0001 * sum_params
             if split_loss:
                 return {"Reward":total_reward_loss/(T+1), "Value": total_value_loss/(T+1), 
                         "Policy": total_policy_loss/(T+1), "Latent": total_latent_loss/(T+1)}
-
+            
             else:
                 return jnp.sum(total_loss)
-
-
+            
         
         comp_params = (
             self.dynamics.layer_parameters,

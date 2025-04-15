@@ -191,7 +191,7 @@ class System:
         print(sum_loss)
         self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
-            network.learning_rate *= 0.99
+            network.learning_rate *= 1
 
 
 

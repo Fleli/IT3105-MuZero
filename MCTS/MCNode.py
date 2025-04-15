@@ -4,7 +4,7 @@ from MCTS.Conventions import *
 from MCTS.MCTSTypes import *
 from NeuralNetwork.NeuralNetwork import *
 
-import math
+from math import sqrt, log
 
 type MCNode = MCNode
 
@@ -74,13 +74,19 @@ class MCNode():
             _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
             return _u
         
-        c = self._c
+        
+        # c = self._c
+        
+        c1 = 1.25
+        c2 = 19_652
+        
         _, policy = prediction(self.state, pred_network)
         p_sa = policy[action]
         N_s = self.visits_to_self
         N_sa = self.visit_counts[action]
+        frac = (N_s + c2 + 1) / c2
         
-        return c * p_sa * N_s / (1 + N_sa)
+        return p_sa * sqrt(N_s) / (1 + N_sa) * (c1 + log(frac))
     
     
     # Q(a) is the value of doing action a

@@ -91,7 +91,7 @@ class MCTS():
         self.log("MCTS Results:", force=True)
         self.log(f" -> Action {results[0]}", force=True)
         self.log(f" -> Visits {results[1]}", force=True)
-        self.log(f" -> Eval {results[2]}", force=True)
+        self.log(f" -> Eval {results[2]}")
         
         return results
     
