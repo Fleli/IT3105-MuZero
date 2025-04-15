@@ -4,10 +4,14 @@ import jax
 import jax.numpy as jnp
 from MCTS.Conventions import prediction, dynamics
 
-def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy):
+def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts):
     value_loss = jnp.square(raw_value - target_value)
-    
     target_policy = target_policy / jnp.sum(target_policy)
+    
+    mcts.log(f"adjusted target_policy = {target_policy}", force=True)
+    
+    mcts.log(f"probs(before log) = {jax.nn.softmax(raw_policy_logits)}", force=True)
+    
     log_probs = jax.nn.log_softmax(raw_policy_logits)
     policy_loss = -jnp.sum(target_policy * log_probs)
     return value_loss, policy_loss
@@ -35,7 +39,9 @@ class NeuralNetworkManager():
                 concrete_state.append(states[state_index])
         return jnp.array(concrete_state + [state]).flatten()
     
-    def bptt(self, states, actions, policies, values, rewards):
+    def bptt(self, states, actions, policies, values, rewards, mcts):
+        
+        mcts.log("Beginning BPTT", force=True)
         
         T = len(actions) 
         
@@ -55,7 +61,10 @@ class NeuralNetworkManager():
             target_policy = counts / jnp.sum(counts)
             target_value = jnp.array([values[0]])
             
-            total_value_loss, total_policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy)
+            mcts.log(f" -> Initial call to prediction loss:", force=True)
+            mcts.log(f"\ttarget_policy={target_policy}\n\ttarget_value={target_value}", force=True)
+            
+            total_value_loss, total_policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts)
             total_latent_loss = 0
             total_reward_loss = 0
             
@@ -82,7 +91,7 @@ class NeuralNetworkManager():
                 target_policy = counts / jnp.sum(counts)
                 target_value = jnp.array([values[t + 1]])
                 
-                value_loss, policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy)
+                value_loss, policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts)
                 
                 total_value_loss += value_loss
                 total_policy_loss += policy_loss

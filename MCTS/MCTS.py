@@ -88,38 +88,13 @@ class MCTS():
         # Get random child, probability weighted to favor those branches that are explored the most.
         results = chosen_action, visit_distr, avg_evaluation
         
-        self.log("MCTS Results:", force=True)
-        self.log(f" -> Action {results[0]}", force=True)
-        self.log(f" -> Visits {results[1]}", force=True)
+        self.log("MCTS Results:")
+        self.log(f" -> Action {results[0]}")
+        self.log(f" -> Visits {results[1]}")
         self.log(f" -> Eval {results[2]}")
         
         return results
     
-    
-    """
-    # Do a rollout to a certain depth, and backpropagate the result afterwards.
-    def _do_rollout(self, leaf: MCNode, rollout_depth: int):
-        
-        accumulated_reward = []
-        
-        node = leaf
-        for depth in range(rollout_depth):
-            self.log(f"\t -> Rollout, depth = {depth + 1} / {rollout_depth}")
-            node.expand(self.dynamics_network)
-            action = self._default_policy(node)
-            node = node.children[action]
-            accumulated_reward.append(node.reward)
-
-        # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
-        evaluation, _ = prediction(node.state, self.prediction_network)
-        # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
-        discount_factor = self.config['discount_factor']
-        
-        accumulated_reward.append(evaluation)
-        
-        node.backpropagate(evaluation, discount_factor)
-        """
-        
         
     # Do a rollout from a node (child of leaf node) to a certain depth (1).
     def do_rollout( self, node: MCNode, depth: int ) -> list[float]:

@@ -121,7 +121,6 @@ class System:
             self.epidata_array.append(epidata)
             score += len(epidata)
             if episode % self.training_int == 0:
-                # self.do_bptt_training(self.EH, self.mbs)      # Feil call-signatur
                 self.do_bptt_training()
                 print("="*60, score/self.training_int)
                 self.mcts.log("="*60+f" {score/self.training_int}")
@@ -132,6 +131,7 @@ class System:
 
     def episode(self):
         """Run a single episode and return collected data."""
+        self.mcts.log("--episode--", force=True)
         state = self.game.reset()
         epidata = []
         reward = 1
@@ -140,7 +140,10 @@ class System:
             step_data = self.step(state, k, reward)
             state, reward, step_data[0], step_data[4] = step_data[0], step_data[4], state, reward
             epidata.append(step_data)
-
+            
+            self.mcts.log(f"k={k}", force=True)
+            self.mcts.log(f"step_data={step_data}", force=True)
+            
             if self.game.terminated:
                 break
         self.mcts.log(f"Value current episode: {len(epidata)}", force=True)
@@ -155,7 +158,7 @@ class System:
 
         # TODO: Det sto [state, ...] her. Har endret til [next_state, ...] fordi vi skal vel ha den neste staten
         # til neste step? Dobbeltsjekk.
-        return [state, root_value, visit_dist, action_k, next_reward]
+        return [next_state, root_value, visit_dist, action_k, next_reward]
 
     def do_bptt_training(self):
         """Perform BPTT training with the episode history."""
@@ -183,13 +186,20 @@ class System:
             rewards = [random_epidata[i][4]
                        for i in range(k + 1, k + roll_ahead + 1)]
             
-            loss = self.nnm.bptt(states, actions, policies, values, rewards)
+            self.mcts.log('states=' + str(states), force=True)
+            self.mcts.log('actions=' + str(actions), force=True)
+            self.mcts.log('policies=' + str(policies), force=True)
+            self.mcts.log('values=' + str(values), force=True)
+            self.mcts.log('rewards=' + str(rewards), force=True)
+            
+            # TODO: Fjern MCTS fra dette callet, gjør det bare for tilgang til logger.
+            loss = self.nnm.bptt(states, actions, policies, values, rewards, self.mcts)
             for loss_key, loss_value in sum_loss.items():
                 sum_loss[loss_key] = loss_value + \
                     to_float(loss[loss_key]/self.mini_batch_size)
             
-        print(sum_loss)
-        self.mcts.log(sum_loss, force=True)
+        # print(sum_loss)
+        # self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
             network.learning_rate *= 1
 

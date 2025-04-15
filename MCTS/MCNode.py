@@ -8,7 +8,6 @@ from math import sqrt, log
 
 type MCNode = MCNode
 
-
 class MCNode():
     
     # Constant in u(s, a) evaluation
