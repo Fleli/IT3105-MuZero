@@ -67,13 +67,14 @@ class GymGame:
 
         states = []
 
-        for state_index in range(k - self.look_back, k):
-            if state_index <= 0:
-                states.append(jnp.zeros_like(state))
+        for state_index in range(k - self.look_back - 1, k):
+            if state_index < 0:
+                #states.append(jnp.zeros_like(state))
+                states.append( [0 for _ in range(len(state))] )
             else:
                 states.append(self.state_history[state_index])
-
-        return jnp.array(states + [state])
+        
+        return jnp.array(np.array(states))
 
     def action_space(self):
         return list(range(self.env.action_space.n))
@@ -131,19 +132,15 @@ class System:
 
     def episode(self):
         """Run a single episode and return collected data."""
-        self.mcts.log("--episode--", force=True)
+        self.mcts.log("--episode--")
         state = self.game.reset()
         epidata = []
-        reward = 1
+        reward = jax.nn.tanh(1)
         # print(f"episode. Note self.Nes={self.num_episode_steps}")
         for k in range(self.num_episode_steps):
             step_data = self.step(state, k, reward)
             state, reward, step_data[0], step_data[4] = step_data[0], step_data[4], state, reward
             epidata.append(step_data)
-            
-            self.mcts.log(f"k={k}", force=True)
-            self.mcts.log(f"step_data={step_data}", force=True)
-            
             if self.game.terminated:
                 break
         self.mcts.log(f"Value current episode: {len(epidata)}", force=True)
@@ -181,16 +178,16 @@ class System:
                        for i in range(k + 1, k + roll_ahead + 1)]
             policies = [random_epidata[i][2]
                         for i in range(k, k + roll_ahead + 1)]
-            values = [sum([self.discount_factor ** i for i in range(len(random_epidata) - i)])
-                      for i in range(k, k + roll_ahead + 1)]
+            values =  jax.nn.tanh(np.array([ sum([self.discount_factor ** i for i in range(len(random_epidata) - i)])
+                      for i in range(k, k + roll_ahead + 1) ]))
             rewards = [random_epidata[i][4]
                        for i in range(k + 1, k + roll_ahead + 1)]
             
-            self.mcts.log('states=' + str(states), force=True)
-            self.mcts.log('actions=' + str(actions), force=True)
-            self.mcts.log('policies=' + str(policies), force=True)
-            self.mcts.log('values=' + str(values), force=True)
-            self.mcts.log('rewards=' + str(rewards), force=True)
+            self.mcts.log('states=' + str(states))
+            self.mcts.log('actions=' + str(actions))
+            self.mcts.log('policies=' + str(policies))
+            self.mcts.log('values=' + str(values))
+            self.mcts.log('rewards=' + str(rewards))
             
             # TODO: Fjern MCTS fra dette callet, gjør det bare for tilgang til logger.
             loss = self.nnm.bptt(states, actions, policies, values, rewards, self.mcts)
@@ -198,7 +195,7 @@ class System:
                 sum_loss[loss_key] = loss_value + \
                     to_float(loss[loss_key]/self.mini_batch_size)
             
-        # print(sum_loss)
+        print(sum_loss)
         # self.mcts.log(sum_loss, force=True)
         for network in [self.nnm.dynamics, self.nnm.prediction, self.nnm.representation]:
             network.learning_rate *= 1
@@ -208,7 +205,8 @@ class System:
 
 
 if __name__ == "__main__":
-    system = System(CONFIG)
-    score = system.train()
-
-
+    try:
+        system = System(CONFIG)
+        score = system.train()
+    except KeyboardInterrupt:
+        print("\n (Finished)\n")

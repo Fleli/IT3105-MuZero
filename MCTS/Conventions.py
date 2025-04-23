@@ -13,11 +13,12 @@ def dynamics(state: AbstractState, action: Action, network: NeuralNetwork, param
     inp = state.copy()
     network_input = jnp.insert(inp, 0, action)
     raw_output = network.forward(network_input, params)
-    return raw_output[0], raw_output[1:]
+    reward = jax.nn.tanh(raw_output[0])
+    return reward, raw_output[1:]
 
 def prediction(state: AbstractState, network: NeuralNetwork) -> tuple[float, jax.Array]:
     raw_output = network.forward(state)
-    evaluation = raw_output[0]
+    evaluation = jax.nn.tanh(raw_output[0])
     logits = raw_output[1:]
     probabilities = jax.nn.softmax(logits)
     return evaluation, probabilities

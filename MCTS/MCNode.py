@@ -8,6 +8,8 @@ from math import sqrt, log
 
 type MCNode = MCNode
 
+ID = 0
+
 class MCNode():
     
     # Constant in u(s, a) evaluation
@@ -17,7 +19,6 @@ class MCNode():
     children: list[MCNode]
     
     parent: MCNode
-    action_taken: Action
     
     visits_to_self: int
     
@@ -35,6 +36,10 @@ class MCNode():
         self.action_from_parent = action_from_parent
         self.action_space = action_space
         self.visits_to_self = 0
+        
+        global ID
+        self.id = ID
+        ID += 1
         
         self.children = []
         
@@ -69,13 +74,15 @@ class MCNode():
     def u(self, action: Action, pred_network) -> float:
         
         if False:
+            c = 2 # self._c
             N_sa = self.visit_counts[action]
-            _u = self._c * math.sqrt(math.log2(self.visits_to_self) / (1 + N_sa))
+            _u = c * sqrt(log(self.visits_to_self) / (1 + N_sa))
             return _u
         
         
         # c = self._c
         
+        #c1 = 1.25
         c1 = 1.25
         c2 = 19_652
         
@@ -92,4 +99,5 @@ class MCNode():
     def Q(self, action: Action) -> float:
         if self.visit_counts[action] > 0:
             return self.sum_evaluations[action] / self.visit_counts[action]
+        # Er en form for exploration bonus for å sikre at begge moves faktisk vurderes.
         return 0.0

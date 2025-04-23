@@ -3,14 +3,14 @@ from NeuralNetwork import *
 import jax
 import jax.numpy as jnp
 from MCTS.Conventions import prediction, dynamics
+import numpy as np
 
 def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts):
     value_loss = jnp.square(raw_value - target_value)
     target_policy = target_policy / jnp.sum(target_policy)
     
-    mcts.log(f"adjusted target_policy = {target_policy}", force=True)
-    
-    mcts.log(f"probs(before log) = {jax.nn.softmax(raw_policy_logits)}", force=True)
+    mcts.log(f"adjusted target_policy = {target_policy}")
+    mcts.log(f"probs(before log) = {jax.nn.softmax(raw_policy_logits)}")
     
     log_probs = jax.nn.log_softmax(raw_policy_logits)
     policy_loss = -jnp.sum(target_policy * log_probs)
@@ -28,20 +28,24 @@ class NeuralNetworkManager():
         self.representation = NeuralNetwork(CONFIG["representation_nn"])
         self.look_back = CONFIG['gym']['q']
     
+    
     def gather_states(self, states, state, k):
 
-        concrete_state = []
+        concrete_states = []
 
-        for state_index in range(k - self.look_back, k):
-            if state_index <= 0:
-                concrete_state.append(jnp.zeros_like(state))
+        for state_index in range(k - self.look_back - 1, k):
+            if state_index < 0:
+                #states.append(jnp.zeros_like(state))
+                concrete_states.append( [0 for _ in range(len(state))] )
             else:
-                concrete_state.append(states[state_index])
-        return jnp.array(concrete_state + [state]).flatten()
+                concrete_states.append(states[state_index])
+        
+        return jnp.array(np.array(concrete_states)).flatten()
     
     def bptt(self, states, actions, policies, values, rewards, mcts):
         
-        mcts.log("Beginning BPTT", force=True)
+        print("BPTT")
+        mcts.log("Beginning BPTT")
         
         T = len(actions) 
         
@@ -53,7 +57,7 @@ class NeuralNetworkManager():
             latent = self.representation.forward(concrete_state, representation_params)
             
             pred_out = self.prediction.forward(latent, prediction_params)
-            raw_value = pred_out[0]
+            raw_value = jax.nn.tanh( pred_out[0] )
             raw_policy_logits = pred_out[1:]
             
             policy = policies[0]
@@ -61,8 +65,8 @@ class NeuralNetworkManager():
             target_policy = counts / jnp.sum(counts)
             target_value = jnp.array([values[0]])
             
-            mcts.log(f" -> Initial call to prediction loss:", force=True)
-            mcts.log(f"\ttarget_policy={target_policy}\n\ttarget_value={target_value}", force=True)
+            mcts.log(f" -> Initial call to prediction loss:")
+            mcts.log(f"\ttarget_policy={target_policy}\n\ttarget_value={target_value}")
             
             total_value_loss, total_policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts)
             total_latent_loss = 0
@@ -71,6 +75,8 @@ class NeuralNetworkManager():
             # TODO: Se etter indekseringsfeil e.l. her.
             
             for t in range(T):
+                
+                mcts.log(f"BPTT loop t={t}")
                 
                 reward, pred_latent = dynamics(latent, actions[t], self.dynamics, params=dynamics_params)
                 reward_target = jnp.array([rewards[t]])
@@ -83,13 +89,15 @@ class NeuralNetworkManager():
                     latent_loss = self.dynamics.loss_function(pred_latent, latent)
                 
                 pred_out = self.prediction.forward(latent, params=prediction_params)
-                raw_value = pred_out[0]
+                raw_value = jax.nn.tanh( pred_out[0] )
                 raw_policy_logits = pred_out[1:]
                 
                 policy = policies[t + 1]
                 counts = jnp.array([policy[0], policy[1]])
                 target_policy = counts / jnp.sum(counts)
                 target_value = jnp.array([values[t + 1]])
+                
+                mcts.log(f"\tactions[t]={actions[t]} policies[t+1]={policy}")
                 
                 value_loss, policy_loss = prediction_loss(raw_value, raw_policy_logits, target_value, target_policy, mcts)
                 
@@ -103,8 +111,6 @@ class NeuralNetworkManager():
                     flattened_params, _ = jax.tree_util.tree_flatten(param)
                     for p in flattened_params:
                         sum_params += jnp.sum(jnp.square(p))
-                
-            total_value_loss *= 0.05
 
             total_loss = total_reward_loss + total_value_loss + total_policy_loss + total_latent_loss
             total_loss += 0.0001 * sum_params
@@ -123,6 +129,8 @@ class NeuralNetworkManager():
         )
 
         grads = jax.grad(composite_loss)(comp_params)
+        
+        print("Grads:", grads)
 
         self.dynamics.layer_parameters = jax.tree_map(
             lambda p, g: p - self.dynamics.learning_rate * g,
