@@ -2,7 +2,7 @@
 from NeuralNetwork import *
 import jax
 import jax.numpy as jnp
-from MCTS.Conventions import dynamics_network_output, prediction_network_output, dynamics_network_input
+from MCTS.Conventions import dynamics_network_output, prediction_network_output, dynamics_network_input, prediction_network_input
 
 def prediction_loss(raw_value, raw_policy_logits, target_value, target_policy):
     value_loss = jnp.square(raw_value - target_value)
@@ -43,7 +43,7 @@ class NeuralNetworkManager():
             concrete_state = self.gather_states([], states[0], 0)
             latent = self.representation.forward(concrete_state, representation_params)
 
-            pred_out = self.prediction.forward(jnp.concatenate([jnp.array([rewards[0]]),latent]), prediction_params)
+            pred_out = self.prediction.forward(prediction_network_input(jnp.array(rewards[:1], latent)), prediction_params)
             raw_value = pred_out[0]
             raw_policy_logits = pred_out[1:]
             
@@ -68,7 +68,7 @@ class NeuralNetworkManager():
                     latent_loss = self.dynamics.loss_function(pred_latent, latent)
 
 
-                pred_in = jnp.concatenate([jnp.array([reward]), latent])
+                pred_in = prediction_network_input(jnp.array([reward]), latent)
                 pred_out = self.prediction.forward(pred_in, prediction_params)
                 raw_value = pred_out[0]
                 raw_policy_logits = pred_out[1:]

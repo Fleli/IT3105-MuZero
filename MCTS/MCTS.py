@@ -90,8 +90,7 @@ class MCTS():
             node = node.children[action]
 
         # Evaluate the leaf state, but throw away the action probabilities (they're irrelevant here).
-        nn_output = self.prediction_network.forward(
-            jnp.concatenate([node.reward, node.state]))
+        nn_output = self.prediction_network.forward(prediction_network_input(node.reward, node.state))
         evaluation, _ = prediction_network_output(nn_output)
         # TODO: self.game.discount_factor() or similar. Function of environment and hence the game class.
         discount_factor = self.config['discount_factor']
@@ -120,8 +119,7 @@ class MCTS():
     def _default_policy(self, node: MCNode) -> Action:
         # List of actions? Need to agree on interface here.
         action_space = self.game.action_space()
-        prediction = self.prediction_network.forward(
-            jnp.concatenate([node.reward, node.state]))
+        prediction = self.prediction_network.forward(prediction_network_input(node.reward, node.state))
         _, probabilities = prediction_network_output(prediction)
         return weighted_choice(action_space, probabilities)[0]
 
